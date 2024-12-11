@@ -1,2 +1,6 @@
 .idea
 idea_exploration
+.koda_key
+.gtfsr_key
+
+dev_data/*
