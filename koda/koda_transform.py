@@ -78,6 +78,7 @@ def _read_pb_file_helper(file_path):
     try:
         return kp.read_pb_to_dataframe(file_path)
     except FileNotFoundError:
+        print(f"File {file_path} not found")
         return pd.DataFrame()
 
 
@@ -101,7 +102,7 @@ def read_rt_hour_to_df(operator: str, feed_type: str, date: str, hour: int) -> p
 
     df_list = [df for df in df_list if not df.empty]
     if not df_list:
-        print(f"No files found in {search_path}")
+        print(f"No data found in {search_path}")
         return pd.DataFrame()
 
     merged_df = pd.concat(df_list, axis=0)
