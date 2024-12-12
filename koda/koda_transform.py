@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import tqdm
 
 import koda.koda_parse as kp
 
@@ -81,6 +82,11 @@ def _read_pb_file_helper(file_path):
 
 
 def read_rt_hour_to_df(operator: str, feed_type: str, date: str, hour: int) -> pd.DataFrame:
+    feather_path = get_rt_feather_path(operator, feed_type, date, hour)
+    if os.path.exists(feather_path):
+        print(f"Reading from {feather_path}")
+        return pd.read_feather(feather_path)
+
     search_path = kp.get_rt_hour_dir_path(operator, feed_type, date, hour)
     file_list = []
     for root, _, files in os.walk(search_path):
@@ -120,4 +126,28 @@ def read_rt_hour_to_df(operator: str, feed_type: str, date: str, hour: int) -> p
         merged_df['_'] = np.zeros(len(merged_df), dtype=np.bool_)
 
     merged_df.reset_index(inplace=True)
+    merged_df.to_feather(feather_path, compression='zstd', compression_level=9)
     return merged_df
+
+
+def read_rt_day_to_df(operator: str, feed_type: str, date: str) -> pd.DataFrame:
+    frames = []
+    for hour in tqdm.tqdm(range(24), desc=f"Reading {operator} {feed_type} {date}"):
+        df = read_rt_hour_to_df(operator, feed_type, date, hour)
+        df.drop(columns='index', errors='ignore', inplace=True)
+        if not df.empty:
+            frames.append(df)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, axis=0)
+
+
+# From pykoda datautils
+def drop_tripupdates_duplicates(df: pd.DataFrame) -> None:
+    if df.empty:
+        return
+    df.sort_values(by='timestamp', ascending=True)
+
+    # Not all feeds provide exactly the same fields, so this filters for it:
+    keys = list({'trip_id', 'direction_id', 'stop_sequence', 'stop_id'}.intersection(df.keys()))
+    df.drop_duplicates(subset=keys, keep='last', inplace=True)
