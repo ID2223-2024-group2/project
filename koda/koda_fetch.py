@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 import requests
 
@@ -7,7 +8,7 @@ try:
     with open(".koda_key", "r") as f:
         koda_api_key = f.read()
 except FileNotFoundError:
-    print("No API key found. Please create a .koda_key file with your API key.")
+    warnings.warn("No API key found. Please create a .koda_key file with your API key.")
     sys.exit()
 
 STATIC_URL = "https://api.koda.trafiklab.se/KoDa/api/v2/gtfs-static/{operator}?date={date}&key={api_key}"
