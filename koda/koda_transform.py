@@ -1,15 +1,18 @@
+import shutil
 from concurrent import futures
 import contextlib
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
 import tqdm
 
 import koda.koda_parse as kp
+from koda.koda_constants import FeedType, OperatorsWithRT
 
 
-def get_rt_feather_path(operator, feed_type, date, hour):
+def get_rt_feather_path(operator: str, feed_type: str, date: str, hour: str):
     rt_folder_path = kp.get_rt_dir_path(operator, date)
     return f"{rt_folder_path}/{operator}-{feed_type.lower()}-{date}T{hour}.feather"
 
@@ -81,31 +84,36 @@ def _read_pb_file_helper(file_path):
         print(f"File {file_path} not found")
         return pd.DataFrame()
 
-
-def read_rt_hour_to_df(operator: str, feed_type: str, date: str, hour: int) -> pd.DataFrame:
-    feather_path = get_rt_feather_path(operator, feed_type, date, hour)
+def read_rt_hour_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, hour: int, executor: ProcessPoolExecutor = None) -> pd.DataFrame:
+    hour_filled = str(hour).zfill(2)
+    feather_path = get_rt_feather_path(operator.value, feed_type.value, date, hour_filled)
     if os.path.exists(feather_path):
-        print(f"Reading from {feather_path}")
+        # print(f"Reading from {feather_path}")
         return pd.read_feather(feather_path)
 
-    search_path = kp.get_rt_hour_dir_path(operator, feed_type, date, hour)
+    search_path = kp.get_rt_hour_dir_path(operator.value, feed_type.value, date, hour)
     file_list = []
     for root, _, files in os.walk(search_path):
         for file in files:
             if file.endswith(".pb"):
                 file_list.append(os.path.join(root, file))
 
-    with futures.ProcessPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
-        print(f"Reading {len(file_list)} files with {os.cpu_count() - 2} processes")
+    # print(f"Reading {len(file_list)} files with {os.cpu_count() - 2} processes")
+
+    if executor is None:
+        with ProcessPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
+            future_list = [executor.submit(_read_pb_file_helper, file_path) for file_path in file_list]
+            df_list = [future.result() for future in as_completed(future_list)]
+    else:
         future_list = [executor.submit(_read_pb_file_helper, file_path) for file_path in file_list]
-        df_list = [future.result() for future in futures.as_completed(future_list)]
+        df_list = [future.result() for future in as_completed(future_list)]
 
     df_list = [df for df in df_list if not df.empty]
-    if not df_list:
+    if df_list:
+        merged_df = pd.concat(df_list, axis=0)
+    else:
         print(f"No data found in {search_path}")
-        return pd.DataFrame()
-
-    merged_df = pd.concat(df_list, axis=0)
+        merged_df = pd.DataFrame()
     # Force casts:
     castings = {}
     for k in merged_df.keys():
@@ -131,24 +139,43 @@ def read_rt_hour_to_df(operator: str, feed_type: str, date: str, hour: int) -> p
     return merged_df
 
 
-def read_rt_day_to_df(operator: str, feed_type: str, date: str) -> pd.DataFrame:
+def read_rt_day_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, remove_folder_after=False, executor: ProcessPoolExecutor = None) -> pd.DataFrame:
     frames = []
-    for hour in tqdm.tqdm(range(24), desc=f"Reading {operator} {feed_type} {date}"):
-        df = read_rt_hour_to_df(operator, feed_type, date, hour)
+    for hour in tqdm.tqdm(range(24), desc=f"Reading {operator.value} {feed_type.value} {date}"):
+        df = read_rt_hour_to_df(operator, feed_type, date, hour, executor=executor)
         df.drop(columns='index', errors='ignore', inplace=True)
         if not df.empty:
             frames.append(df)
     if not frames:
         return pd.DataFrame()
+    if remove_folder_after:
+        rt_folder_path = kp.get_rt_dir_path(operator.value, date)
+        operator_folder = os.path.join(rt_folder_path, operator.value)
+        if os.path.exists(operator_folder):
+            print(f"Removing {operator_folder}")
+            shutil.rmtree(operator_folder)
     return pd.concat(frames, axis=0)
 
 
 # From pykoda datautils
-def drop_tripupdates_duplicates(df: pd.DataFrame) -> None:
+def drop_tripupdates_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return
     df.sort_values(by='timestamp', ascending=True)
 
     # Not all feeds provide exactly the same fields, so this filters for it:
     keys = list({'trip_id', 'direction_id', 'stop_sequence', 'stop_id'}.intersection(df.keys()))
-    df.drop_duplicates(subset=keys, keep='last', inplace=True)
+    return df.drop_duplicates(subset=keys, keep='last')
+
+
+def keep_only_latest_stop_updates(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    # Ensure the DataFrame is sorted by 'timestamp'
+    df.sort_values(by='timestamp', ascending=True, inplace=True)
+
+    # Drop duplicates, keeping the last occurrence (latest timestamp)
+    df = df.drop_duplicates(subset=['trip_id', 'stop_id'], keep='last')
+
+    # Reset the index
+    return df.reset_index(drop=True)

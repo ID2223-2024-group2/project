@@ -75,7 +75,7 @@ def get_compression_type(file_path: str) -> str:
     return "unknown"
 
 
-def unzip_gtfs_archive(input_path: str, data_dir=DATA_DIR):
+def unzip_gtfs_archive(input_path: str, data_dir=DATA_DIR, remove_archive_after=False) -> str:
     print(f"Unzipping {input_path}")
     input_file = os.path.basename(input_path)
     output_path = os.path.join(data_dir, input_file.replace(".7z", ""))
@@ -91,6 +91,9 @@ def unzip_gtfs_archive(input_path: str, data_dir=DATA_DIR):
             zip_ref.extractall(output_path)
     else:
         raise ValueError(f"Unsupported compression type: {compression_type}")
+    if remove_archive_after:
+        print(f"Removing {input_path}")
+        os.remove(input_path)
     return output_path
 
 

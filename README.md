@@ -12,6 +12,8 @@ Historical data:
 Current data:
 - https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
 
+General information on GTFS:
+- https://gtfs.org/documentation/overview/
 
 ### Weather Data
 - https://open-meteo.com/en/docs

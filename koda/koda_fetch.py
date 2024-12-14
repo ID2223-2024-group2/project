@@ -1,12 +1,19 @@
 import os
 import sys
+import time
 import warnings
 
 import requests
 
+from koda.koda_constants import OperatorsWithRT, FeedType
+
+
 try:
-    with open(".koda_key", "r") as f:
-        koda_api_key = f.read()
+    try:
+        koda_api_key = os.environ["KODA_KEY"]
+    except KeyError:
+        with open(".koda_key", "r") as f:
+            koda_api_key = f.read()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .koda_key file with your API key.")
     sys.exit()
@@ -14,7 +21,9 @@ except FileNotFoundError:
 STATIC_URL = "https://api.koda.trafiklab.se/KoDa/api/v2/gtfs-static/{operator}?date={date}&key={api_key}"
 REALTIME_URL = "https://api.koda.trafiklab.se/KoDa/api/v2/gtfs-rt/{operator}/{feed}?date={date}&key={api_key}"
 DEFAULT_DOWNLOAD_DIR = "./dev_data/koda_download"
-MAX_POLL_TIMES = 20
+# KoDa docs: "creation of an archive can take between 1 and 60 minutes"
+MAX_POLL_TIMES = 120
+POLL_DELAY = 30
 KODA_API_TIMEOUT = 20
 
 
@@ -43,6 +52,10 @@ def fetch_gtfs_archive(url, target_path):
             response = requests.get(url, timeout=KODA_API_TIMEOUT)
             polled += 1
             print(f"Polling {polled}/{MAX_POLL_TIMES}")
+            time.sleep(POLL_DELAY)
+        if response.status_code == 202:
+            print("Timeout reached.")
+            return None
         with open(target_path, "wb") as file:
             file.write(response.content)
         print("File is ready.")
@@ -57,7 +70,7 @@ def fetch_gtfs_static_archive(operator, date, download_dir=DEFAULT_DOWNLOAD_DIR)
     return fetch_gtfs_archive(url, target_path)
 
 
-def fetch_gtfs_realtime_archive(operator, feed, date, download_dir=DEFAULT_DOWNLOAD_DIR):
-    url = REALTIME_URL.format(operator=operator, feed=feed, date=date, api_key=koda_api_key)
-    target_path = get_rt_download_path(operator, date, download_dir)
+def fetch_gtfs_realtime_archive(operator: OperatorsWithRT, feed: FeedType, date: str, download_dir=DEFAULT_DOWNLOAD_DIR):
+    url = REALTIME_URL.format(operator=operator.value, feed=feed.value, date=date, api_key=koda_api_key)
+    target_path = get_rt_download_path(operator.value, date, download_dir)
     return fetch_gtfs_archive(url, target_path)
