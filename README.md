@@ -8,9 +8,11 @@
 ### Public Transport Delays
 Historical data:
 - https://www.trafiklab.se/api/trafiklab-apis/koda/
+- Pipeline: `koda_feature_pipeline.py`
 
 Current data:
 - https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
+- Pipeline: TODO
 
 General information on GTFS:
 - https://gtfs.org/documentation/overview/
