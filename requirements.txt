@@ -120,3 +120,4 @@ zipp==3.21.0
 hopsworks~=4.1.4
 confluent-kafka~=2.6.1
 py7zr~=0.22.0
+pyarrow~=18.1.0
