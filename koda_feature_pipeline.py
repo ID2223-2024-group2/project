@@ -18,6 +18,10 @@ if __name__ == "__main__":
     OPERATOR = OperatorsWithRT.X_TRAFIK
     df = kp.get_trip_updates_for_day(DATE, OPERATOR)
 
+    if df.empty:
+        print("No data available. Pipeline exiting.")
+        sys.exit(0)
+
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
         "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",

@@ -11,9 +11,13 @@ from koda.koda_constants import OperatorsWithRT, FeedType
 try:
     try:
         koda_api_key = os.environ["KODA_KEY"]
+        print("API key found in environment variables.")
     except KeyError:
         with open(".koda_key", "r") as f:
             koda_api_key = f.read()
+            print("API key found in .koda_key file.")
+    if not koda_api_key:
+        raise FileNotFoundError
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .koda_key file with your API key.")
     sys.exit()
