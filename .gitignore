@@ -3,6 +3,7 @@ idea_exploration
 .koda_key
 .gtfsr_key
 .openmeteo_key
+.hw_key
 
 dev_data/*
 !dev_data/openmeteo_data
