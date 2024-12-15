@@ -61,6 +61,8 @@ def fetch_gtfs_archive(url, target_path):
         print("File is ready.")
     else:
         print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
     return target_path
 
 

@@ -16,6 +16,9 @@ def get_trip_updates_for_day(date: str, operator: OperatorsWithRT) -> pd.DataFra
         return kt.read_rt_day_to_df(operator, FeedType.TRIP_UPDATES, date, remove_folder_after=True)
 
     archive_path = kf.fetch_gtfs_realtime_archive(operator, FeedType.TRIP_UPDATES, date)
+    if archive_path is None:
+        print(f"Failed to fetch realtime data for {operator.value} on {date}")
+        return pd.DataFrame()
     folder_path = kp.unzip_gtfs_archive(archive_path, remove_archive_after=True)
     print(f"Unzipped realtime data to {folder_path}")
 
