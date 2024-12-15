@@ -12,6 +12,8 @@ from koda.koda_constants import FeedType, OperatorsWithRT
 USE_PROCESSES = os.environ.get("USE_PROCESSES")
 if USE_PROCESSES is None:
     USE_PROCESSES = os.cpu_count() - 2
+else:
+    USE_PROCESSES = int(USE_PROCESSES)
 
 def get_trip_updates_for_day(date: str, operator: OperatorsWithRT) -> pd.DataFrame:
     rt_folder_path = kp.get_rt_dir_path(operator.value, date)
