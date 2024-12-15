@@ -1,5 +1,7 @@
+import logging.config
 import os
 import sys
+import time
 
 import hopsworks
 import pandas as pd
@@ -10,16 +12,27 @@ import koda.koda_transform as kt
 
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
+OPERATOR = OperatorsWithRT.X_TRAFIK
 
-SAVE_TO_HW = False
+SAVE_TO_HW = True
 
-if __name__ == "__main__":
-    DATE = "2023-02-06"
-    OPERATOR = OperatorsWithRT.X_TRAFIK
-    df = kp.get_trip_updates_for_day(DATE, OPERATOR)
+# Set up logging with an absolute path
+log_file_path = os.path.join(os.path.dirname(__file__), 'progress.log')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(log_file_path),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+def backfill_date(date: str):
+    df = kp.get_trip_updates_for_day(date, OPERATOR)
 
     if df.empty:
-        print("No data available. Pipeline exiting.")
+        logger.warning(f"No data available for {date}. Pipeline exiting.")
         sys.exit(0)
 
     columns_to_keep = [
@@ -31,6 +44,7 @@ if __name__ == "__main__":
     df = kt.keep_only_latest_stop_updates(df)
 
     # Set up arrival_time as our index and main datetime column
+    df = df.dropna(subset=['arrival_time']) # Drop rows with missing arrival_time
     df['arrival_time'] = df['arrival_time'].astype(int)
     df['arrival_time'] = pd.to_datetime(df['arrival_time'], unit='s')
     df = df.sort_values(by='arrival_time')
@@ -60,7 +74,6 @@ if __name__ == "__main__":
     # Convert 'on_time_mean' to percentage
     rolling_metrics['on_time_mean'] *= 100
 
-
     # Resample rolling metrics to fixed hourly intervals to summarize day
     final_metrics = rolling_metrics.resample('h', on='arrival_time').agg({
         'mean_arrival_delay': 'mean',
@@ -79,7 +92,8 @@ if __name__ == "__main__":
     final_metrics['stop_count'] = hour_df['stop_count']
 
     # TODO: Change based on model?
-    final_metrics.fillna(0, inplace=True) # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
+    final_metrics.fillna(0,
+                         inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
 
     # TODO: Data expectations?
 
@@ -108,3 +122,25 @@ if __name__ == "__main__":
     delays_fg.update_feature_description("max_departure_delay_seconds", "Max stop departure delay in seconds")
     delays_fg.update_feature_description("on_time_mean_percent", "Percentage of stops on time (-2 to 5 minutes)")
     delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
+
+
+if __name__ == "__main__":
+    # START_DATE = "2022-02-01"
+    START_DATE = "2024-10-01"
+    END_DATE = "2024-12-01"
+    STRIDE = pd.DateOffset(days=1)
+
+    dates = pd.date_range(START_DATE, END_DATE, freq=STRIDE)
+    total_dates = len(dates)
+    start_time = time.time()
+
+    for i, datetime in enumerate(dates):
+        logger.info("Starting processing for date: %s", datetime)
+        date = datetime.strftime("%Y-%m-%d")
+        backfill_date(date)
+        elapsed_time = time.time() - start_time
+        avg_time_per_date = elapsed_time / (i + 1)
+        remaining_time = avg_time_per_date * (total_dates - (i + 1))
+        logger.info("Completed processing for date: %s", date)
+        logger.info("Progress: %d/%d (%.2f%%) - Estimated time remaining: %.2f seconds",
+                     i + 1, total_dates, (i + 1) / total_dates * 100, remaining_time)

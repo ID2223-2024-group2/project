@@ -8,7 +8,8 @@
 ### Public Transport Delays
 Historical data:
 - https://www.trafiklab.se/api/trafiklab-apis/koda/
-- Pipeline: `koda_feature_pipeline.py`
+- Earliest tested successful request for operator `xt`: `2022-02-01`
+- Pipeline: `koda_backfill_feature_pipeline.py`
 
 Current data:
 - https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
