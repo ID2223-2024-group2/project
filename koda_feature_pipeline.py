@@ -60,6 +60,12 @@ if __name__ == "__main__":
         'on_time_mean': 'mean',
     }).reset_index()
 
+    # Rename columns
+    final_metrics.columns = ['arrival_time_bin',
+                             'mean_arrival_delay_seconds', 'max_arrival_delay_seconds',
+                             'mean_departure_delay_seconds', 'max_departure_delay_seconds',
+                             'on_time_mean_percent']
+
     final_metrics['stop_count'] = hour_df['stop_count']
 
     # TODO: Change based on model?
