@@ -100,33 +100,33 @@ def backfill_date(date: str, dry_run = True) -> int:
     try:
         project = hopsworks.login()
         fs = project.get_feature_store()
-    except ConnectionError as e:
+        delays_fg = fs.get_or_create_feature_group(
+            name='delays',
+            description='Aggregated delay metrics per hour per day',
+            version=3,
+            primary_key=['arrival_time_bin'],
+            event_time='arrival_time_bin'
+        )
+        delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
+        delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
+        delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
+        delays_fg.update_feature_description("mean_departure_delay_seconds", "Mean stop departure delay in seconds")
+        delays_fg.update_feature_description("max_departure_delay_seconds", "Max stop departure delay in seconds")
+        delays_fg.update_feature_description("on_time_mean_percent", "Percentage of stops on time (-2 to 5 minutes)")
+        delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
+        delays_fg.update_feature_description("route_type",
+                                             "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
+    except Exception as e:
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
         return 2
 
-    delays_fg = fs.get_or_create_feature_group(
-        name='delays',
-        description='Aggregated delay metrics per hour per day',
-        version=2,
-        primary_key=['arrival_time_bin'],
-        event_time='arrival_time_bin'
-    )
-    delays_fg.insert(final_metrics)
-    delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
-    delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
-    delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
-    delays_fg.update_feature_description("mean_departure_delay_seconds", "Mean stop departure delay in seconds")
-    delays_fg.update_feature_description("max_departure_delay_seconds", "Max stop departure delay in seconds")
-    delays_fg.update_feature_description("on_time_mean_percent", "Percentage of stops on time (-2 to 5 minutes)")
-    delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
-    delays_fg.update_feature_description("route_type", "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
     return 0
 
 
 if __name__ == "__main__":
     START_DATE = os.environ.get("START_DATE", "2023-01-05")
     END_DATE = os.environ.get("END_DATE", "2023-01-07")
-    DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
+    DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
 
     try:
