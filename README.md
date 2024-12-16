@@ -9,8 +9,11 @@
 Historical data:
 - https://www.trafiklab.se/api/trafiklab-apis/koda/
 - Earliest tested successful request for operator `xt`: `2022-02-01`
-- Pipeline: `koda_backfill_feature_pipeline.py`
+- Backfill Pipeline: `koda_backfill_feature_pipeline.py`
   - Env Vars:
+    - `START_DATE`: Start date for backfilling
+    - `END_DATE`: End date for backfilling
+    - `STRIDE`: Stride for backfilling
     - `KODA_API_KEY`: API key for KoDa
     - `USE_PROCESSES`: Number of processes to use for parallel processing
     - `HOPSWORKS_API_KEY`: API key for Hopsworks
@@ -24,3 +27,11 @@ General information on GTFS:
 
 ### Weather Data
 - https://open-meteo.com/en/docs
+- Backfill pipeline: `weather_backfill_feature_pipeline.py`
+  - Env Vars:
+    - `START_DATE`: Start date for backfilling
+    - `END_DATE`: End date for backfilling
+    - `HOPSWORKS_API_KEY`: API key for Hopsworks
+
+## Training
+Experimentation: `training_test.ipynb`
