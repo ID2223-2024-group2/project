@@ -3,6 +3,12 @@
 
 **Goal:** Predict weather-based public transport delays
 
+## Setup
+
+> **Dependencies** are currently just managed with venv and there are already some conflicts, but working configurations are possible.
+`hopsworks` and the old `protobuf` version needed for KoDa appear to be the main causes of issues.
+`requirements_jonas.txt` should contain a working configuration for Win 11 python 3.12.3.
+
 ## Data Sources
 
 ### Public Transport Delays
