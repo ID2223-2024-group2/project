@@ -126,13 +126,19 @@ def backfill_date(date: str):
 
 if __name__ == "__main__":
     # START_DATE = "2022-02-01"
-    START_DATE = "2024-10-01"
-    END_DATE = "2024-12-01"
-    STRIDE = pd.DateOffset(days=1)
+    START_DATE = os.environ.get("START_DATE", "2024-9-01")
+    END_DATE = os.environ.get("END_DATE", "2024-10-01")
+    STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 7)))
 
-    dates = pd.date_range(START_DATE, END_DATE, freq=STRIDE)
+    try:
+        dates = pd.date_range(START_DATE, END_DATE, freq=STRIDE)
+    except (ValueError, TypeError):
+        logger.error("Invalid date range. Exiting.")
+        sys.exit(1)
     total_dates = len(dates)
     start_time = time.time()
+
+    logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE, total_dates)
 
     for i, datetime in enumerate(dates):
         logger.info("Starting processing for date: %s", datetime)
