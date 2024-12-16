@@ -8,7 +8,7 @@ from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp
 
-SAVE_TO_HW = True
+SAVE_TO_HW = False
 
 # Coordinates for Gävle
 longitude = 60.6749
@@ -33,6 +33,7 @@ if __name__ == "__main__":
     df = wp.parse_weather_response(response)
     # Column list: [ apparent_temperature, cloud_cover, date, precipitation, rain, snow_depth, snowfall, temperature_2m, wind_gusts_10m, wind_speed_100m, wind_speed_10m]
 
+    logger.info("Parsed %s rows of weather data", len(df))
     if not SAVE_TO_HW:
         df.to_csv("weather_backfill.csv", index=False)
         sys.exit(0)
