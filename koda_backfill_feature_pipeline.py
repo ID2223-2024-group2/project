@@ -17,12 +17,12 @@ OPERATOR = OperatorsWithRT.X_TRAFIK
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
 
-def backfill_date(date: str, dry_run = True):
+def backfill_date(date: str, dry_run = True) -> int:
     df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if df.empty:
         logger.warning(f"No data available for {date}. Pipeline exiting.")
-        sys.exit(0)
+        return 1
 
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
@@ -92,13 +92,17 @@ def backfill_date(date: str, dry_run = True):
 
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
-        sys.exit(0)
+        return -1
 
     if os.environ.get("HOPSWORKS_API_KEY") is None:
         os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
 
-    project = hopsworks.login()
-    fs = project.get_feature_store()
+    try:
+        project = hopsworks.login()
+        fs = project.get_feature_store()
+    except ConnectionError as e:
+        logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
+        return 2
 
     delays_fg = fs.get_or_create_feature_group(
         name='delays',
@@ -116,6 +120,7 @@ def backfill_date(date: str, dry_run = True):
     delays_fg.update_feature_description("on_time_mean_percent", "Percentage of stops on time (-2 to 5 minutes)")
     delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
     delays_fg.update_feature_description("route_type", "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
+    return 0
 
 
 if __name__ == "__main__":
@@ -134,13 +139,25 @@ if __name__ == "__main__":
 
     logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE, total_dates)
 
+    exit_codes = []
+
     for i, datetime in enumerate(dates):
         logger.info("Starting processing for date: %s", datetime)
         date = datetime.strftime("%Y-%m-%d")
-        backfill_date(date, DRY_RUN)
+        exit_code = backfill_date(date, DRY_RUN)
+        if exit_code == -1:
+            logger.info("Dry run completed for date: %s", date)
+            sys.exit(0)
+        exit_codes.append(exit_code)
         elapsed_time = time.time() - start_time
         avg_time_per_date = elapsed_time / (i + 1)
         remaining_time = avg_time_per_date * (total_dates - (i + 1))
-        logger.info("Completed processing for date: %s", date)
+        logger.info("Completed processing for date: %s with exit code: %d", date, exit_code)
         logger.info("Progress: %d/%d (%.2f%%) - Estimated time remaining: %.2f seconds",
                      i + 1, total_dates, (i + 1) / total_dates * 100, remaining_time)
+
+    logger.info("Backfill process completed for dates: %s - %s", START_DATE, END_DATE)
+    successfully_uploaded = exit_codes.count(0)
+    not_uploaded = exit_codes.count(2)
+    missing_data = exit_codes.count(1)
+    logger.info("Summary: Successfully uploaded: %d, Not uploaded: %d, Missing data: %d", successfully_uploaded, not_uploaded, missing_data)
