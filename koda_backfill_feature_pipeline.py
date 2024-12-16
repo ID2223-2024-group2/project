@@ -107,6 +107,7 @@ def backfill_date(date: str, dry_run = True) -> int:
             primary_key=['arrival_time_bin'],
             event_time='arrival_time_bin'
         )
+        delays_fg.insert(final_metrics)
         delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
         delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
         delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
