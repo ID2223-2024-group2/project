@@ -16,9 +16,8 @@ OPERATOR = OperatorsWithRT.X_TRAFIK
 
 SAVE_TO_HW = True
 
-log_file_path = os.path.join(os.path.dirname(__file__), 'progress.log')
-logger = setup_logger('project_logger', log_file_path)
-logger.info("Logger setup complete.")
+log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
+logger = setup_logger('koda_backfill', log_file_path)
 
 def backfill_date(date: str):
     df = kp.get_trip_updates_for_day(date, OPERATOR)
@@ -90,7 +89,7 @@ def backfill_date(date: str):
     # TODO: Data expectations?
 
     if not SAVE_TO_HW:
-        final_metrics.to_csv("final_metrics.csv", index=False)
+        final_metrics.to_csv("koda_backfill.csv", index=False)
         sys.exit(0)
 
     if os.environ.get("HOPSWORKS_API_KEY") is None:
@@ -117,7 +116,7 @@ def backfill_date(date: str):
 
 
 if __name__ == "__main__":
-    START_DATE = os.environ.get("START_DATE", "2024-9-01")
+    START_DATE = os.environ.get("START_DATE", "2024-09-01")
     END_DATE = os.environ.get("END_DATE", "2024-10-01")
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 7)))
 
