@@ -1,4 +1,3 @@
-import logging.config
 import os
 import sys
 import time
@@ -9,6 +8,7 @@ import pandas as pd
 from koda.koda_constants import OperatorsWithRT
 import koda.koda_pipeline as kp
 import koda.koda_transform as kt
+from shared.file_logger import setup_logger
 
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
@@ -16,17 +16,9 @@ OPERATOR = OperatorsWithRT.X_TRAFIK
 
 SAVE_TO_HW = True
 
-# Set up logging with an absolute path
 log_file_path = os.path.join(os.path.dirname(__file__), 'progress.log')
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(log_file_path),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger('project_logger', log_file_path)
+logger.info("Logger setup complete.")
 
 def backfill_date(date: str):
     df = kp.get_trip_updates_for_day(date, OPERATOR)
@@ -125,7 +117,6 @@ def backfill_date(date: str):
 
 
 if __name__ == "__main__":
-    # START_DATE = "2022-02-01"
     START_DATE = os.environ.get("START_DATE", "2024-9-01")
     END_DATE = os.environ.get("END_DATE", "2024-10-01")
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 7)))

@@ -6,6 +6,7 @@ import warnings
 import requests
 
 from koda.koda_constants import OperatorsWithRT, FeedType
+from shared.api import fetch_with_exponential_backoff
 
 try:
     koda_api_key = os.environ.get("KODA_KEY")
@@ -37,30 +38,12 @@ def get_rt_download_path(operator: str, date: str, download_dir=DEFAULT_DOWNLOAD
     return f'{download_dir}/{operator}_rt_{date.replace("-", "_")}.7z'
 
 
-def fetch_with_exponential_backoff(url):
-    retries = 0
-    wait_time = KODA_API_TIMEOUT
-
-    while retries < KODA_MAX_RETRIES:
-        try:
-            response = requests.get(url, timeout=KODA_API_TIMEOUT)
-            return response
-        except requests.exceptions.Timeout:
-            retries += 1
-            print(f"Timeout reached. Retrying in {wait_time} seconds...")
-            time.sleep(wait_time)
-            wait_time *= 2
-
-    print("Max retries reached. Exiting.")
-    return None
-
-
 def fetch_gtfs_archive(url, target_path):
     if os.path.exists(target_path):
         print("File already exists.")
         return target_path
 
-    response = fetch_with_exponential_backoff(url)
+    response = fetch_with_exponential_backoff(url, KODA_API_TIMEOUT, KODA_MAX_RETRIES)
     if response.status_code == 200:
         with open(target_path, "wb") as file:
             file.write(response.content)
