@@ -11,6 +11,7 @@ Historical data:
 - Earliest tested successful request for operator `xt`: `2022-02-01`
 - Backfill Pipeline: `koda_backfill_feature_pipeline.py`
   - Env Vars:
+    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
     - `START_DATE`: Start date for backfilling
     - `END_DATE`: End date for backfilling
     - `STRIDE`: Stride for backfilling

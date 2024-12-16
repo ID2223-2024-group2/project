@@ -14,12 +14,10 @@ ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
 OPERATOR = OperatorsWithRT.X_TRAFIK
 
-SAVE_TO_HW = False
-
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
 
-def backfill_date(date: str):
+def backfill_date(date: str, dry_run = True):
     df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if df.empty:
@@ -92,7 +90,7 @@ def backfill_date(date: str):
 
     # TODO: Data expectations?
 
-    if not SAVE_TO_HW:
+    if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
         sys.exit(0)
 
@@ -121,8 +119,9 @@ def backfill_date(date: str):
 
 
 if __name__ == "__main__":
-    START_DATE = os.environ.get("START_DATE", "2023-01-06")
+    START_DATE = os.environ.get("START_DATE", "2023-01-05")
     END_DATE = os.environ.get("END_DATE", "2023-01-07")
+    DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
 
     try:
@@ -138,7 +137,7 @@ if __name__ == "__main__":
     for i, datetime in enumerate(dates):
         logger.info("Starting processing for date: %s", datetime)
         date = datetime.strftime("%Y-%m-%d")
-        backfill_date(date)
+        backfill_date(date, DRY_RUN)
         elapsed_time = time.time() - start_time
         avg_time_per_date = elapsed_time / (i + 1)
         remaining_time = avg_time_per_date * (total_dates - (i + 1))
