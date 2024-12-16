@@ -7,3 +7,4 @@ idea_exploration
 
 dev_data/*
 !dev_data/openmeteo_data
+models
