@@ -7,17 +7,14 @@ import requests
 
 from koda.koda_constants import OperatorsWithRT, FeedType
 
-
 try:
-    try:
-        koda_api_key = os.environ["KODA_KEY"]
-        # print("API key found in environment variables.")
-    except KeyError:
+    koda_api_key = os.environ.get("KODA_KEY")
+    if not koda_api_key:
         with open(".koda_key", "r") as f:
             koda_api_key = f.read()
+            if not koda_api_key:
+                raise FileNotFoundError
             # print("API key found in .koda_key file.")
-    if not koda_api_key:
-        raise FileNotFoundError
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .koda_key file with your API key.")
     sys.exit()
@@ -29,6 +26,7 @@ DEFAULT_DOWNLOAD_DIR = "./dev_data/koda_download"
 MAX_POLL_TIMES = 120
 POLL_DELAY = 30
 KODA_API_TIMEOUT = 20
+KODA_MAX_RETRIES = 5
 
 
 def get_static_download_path(operator: str, date: str, download_dir=DEFAULT_DOWNLOAD_DIR) -> str:
@@ -39,12 +37,30 @@ def get_rt_download_path(operator: str, date: str, download_dir=DEFAULT_DOWNLOAD
     return f'{download_dir}/{operator}_rt_{date.replace("-", "_")}.7z'
 
 
+def fetch_with_exponential_backoff(url):
+    retries = 0
+    wait_time = KODA_API_TIMEOUT
+
+    while retries < KODA_MAX_RETRIES:
+        try:
+            response = requests.get(url, timeout=KODA_API_TIMEOUT)
+            return response
+        except requests.exceptions.Timeout:
+            retries += 1
+            print(f"Timeout reached. Retrying in {wait_time} seconds...")
+            time.sleep(wait_time)
+            wait_time *= 2
+
+    print("Max retries reached. Exiting.")
+    return None
+
+
 def fetch_gtfs_archive(url, target_path):
     if os.path.exists(target_path):
         print("File already exists.")
         return target_path
 
-    response = requests.get(url, timeout=KODA_API_TIMEOUT)
+    response = fetch_with_exponential_backoff(url)
     if response.status_code == 200:
         with open(target_path, "wb") as file:
             file.write(response.content)
@@ -76,7 +92,8 @@ def fetch_gtfs_static_archive(operator, date, download_dir=DEFAULT_DOWNLOAD_DIR)
     return fetch_gtfs_archive(url, target_path)
 
 
-def fetch_gtfs_realtime_archive(operator: OperatorsWithRT, feed: FeedType, date: str, download_dir=DEFAULT_DOWNLOAD_DIR):
+def fetch_gtfs_realtime_archive(operator: OperatorsWithRT, feed: FeedType, date: str,
+                                download_dir=DEFAULT_DOWNLOAD_DIR):
     url = REALTIME_URL.format(operator=operator.value, feed=feed.value, date=date, api_key=koda_api_key)
     target_path = get_rt_download_path(operator.value, date, download_dir)
     return fetch_gtfs_archive(url, target_path)
