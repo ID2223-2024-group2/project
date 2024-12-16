@@ -8,7 +8,7 @@ from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp
 
-SAVE_TO_HW = False
+SAVE_TO_HW = True
 
 # Coordinates for Gävle
 longitude = 60.6749
@@ -18,8 +18,8 @@ log_file_path = os.path.join(os.path.dirname(__file__), 'weather_backfill.log')
 logger = setup_logger('weather_backfill', log_file_path)
 
 if __name__ == "__main__":
-    START_DATE = os.environ.get("START_DATE", "2024-09-01")
-    END_DATE = os.environ.get("END_DATE", "2024-10-01")
+    START_DATE = os.environ.get("START_DATE", "2023-01-01")
+    END_DATE = os.environ.get("END_DATE", "2024-12-15")
 
     try:
         dates = pd.date_range(START_DATE, END_DATE)
@@ -31,6 +31,9 @@ if __name__ == "__main__":
     logger.info("Starting backfill process for dates: %s - %s (%s days)", START_DATE, END_DATE, total_dates)
     response = wf.fetch_weather_archive(longitude, latitude, START_DATE, END_DATE)
     df = wp.parse_weather_response(response)
+    # Add hour as a separate column
+    df['hour'] = df['date'].dt.hour
+
     # Column list: [ apparent_temperature, cloud_cover, date, precipitation, rain, snow_depth, snowfall, temperature_2m, wind_gusts_10m, wind_speed_100m, wind_speed_10m]
 
     logger.info("Parsed %s rows of weather data", len(df))
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     weather_fg = fs.get_or_create_feature_group(
         name='weather',
         description='Hourly weather data for Gävle',
-        version=1,
+        version=2,
         primary_key=['date'],
         event_time="date",
     )
@@ -63,3 +66,4 @@ if __name__ == "__main__":
     weather_fg.update_feature_description("wind_gusts_10m", "Wind gusts at 10m in km/h")
     weather_fg.update_feature_description("wind_speed_100m", "Wind speed at 100m in km/h")
     weather_fg.update_feature_description("wind_speed_10m", "Wind speed at 10m in km/h")
+    weather_fg.update_feature_description("hour", "Hour of the day")
