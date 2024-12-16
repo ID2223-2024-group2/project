@@ -69,9 +69,9 @@ def fetch_gtfs_archive(url, target_path):
     return target_path
 
 
-def fetch_gtfs_static_archive(operator, date, download_dir=DEFAULT_DOWNLOAD_DIR):
-    url = STATIC_URL.format(operator=operator, date=date, api_key=koda_api_key)
-    target_path = get_static_download_path(operator, date, download_dir)
+def fetch_gtfs_static_archive(operator: OperatorsWithRT, date: str, download_dir=DEFAULT_DOWNLOAD_DIR):
+    url = STATIC_URL.format(operator=operator.value, date=date, api_key=koda_api_key)
+    target_path = get_static_download_path(operator.value, date, download_dir)
     return fetch_gtfs_archive(url, target_path)
 
 

@@ -7,6 +7,8 @@ import numpy as np
 import py7zr
 import pandas as pd
 from google.protobuf import json_format  # Use protobuf==3.20.3
+
+from koda.koda_constants import OperatorsWithRT, StaticDataTypes
 from protobuf_defs.gtfs_realtime_pb2 import FeedMessage
 
 DATA_DIR = "./dev_data/koda_data"
@@ -54,6 +56,12 @@ def get_pb_file_info(file_path: str):
     date = "-".join(parts[-5:-2])
     hour, minute, second = parts[-2].split("-")
     return operator, feed_type, date, int(hour), int(minute), int(second)
+
+
+def get_static_file_path(operator: str, date: str, static_data_type: str, data_dir=DATA_DIR):
+    dir_path = get_static_dir_path(operator, date, data_dir)
+    file_name = f"{static_data_type}.txt"
+    return os.path.join(dir_path, file_name)
 
 
 def get_compression_type(file_path: str) -> str:
@@ -152,3 +160,8 @@ def read_pb_to_dataframe(file_path: str) -> pd.DataFrame:
     df = unpack_jsons(df)
     df.reset_index(drop=True, inplace=True)
     return df
+
+
+def read_static_data_to_dataframe(operator: OperatorsWithRT, static_data_type: StaticDataTypes, date:str) -> pd.DataFrame:
+    file_path = get_static_file_path(operator.value, date, static_data_type.value)
+    return pd.read_csv(file_path, sep=",")

@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Dict
 
 
 class FeedType(Enum):
@@ -20,3 +21,33 @@ class OperatorsWithRT(Enum):
     VARMLANDSTRAFIK = "varm"
     X_TRAFIK = "xt"
     OSTGOTATRAFIKEN = "otraf"
+
+
+class StaticDataTypes(Enum):
+    AGENCY = "agency"
+    ATTRIBUTIONS = "attributions"
+    CALENDAR = "calendar"
+    CALENDAR_DATES = "calendar_dates"
+    FEED_INFO = "feed_info"
+    ROUTES = "routes"
+    SHAPES = "shapes"
+    STOP_TIMES = "stop_times"
+    STOPS = "stops"
+    TRANSFERS = "transfers"
+    TRIPS = "trips"
+
+
+route_types: Dict[int, str] = {
+    100: "Railway Service",
+    101: "High Speed Rail Service",
+    102: "Long Distance Rail Service",
+    103: "Inter Regional Rail Service",
+    105: "Sleeper Rail Service",
+    106: "Regional Rail Service",
+    401: "Metro Service",
+    700: "Bus Service",
+    714: "Rail Replacement Bus Service",
+    900: "Tram Service",
+    1000: "Water Transport Service",
+    1501: "Communal Taxi Service"
+}
