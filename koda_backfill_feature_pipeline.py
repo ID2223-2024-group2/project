@@ -18,7 +18,8 @@ RUN_HW_MATERIALIZATION_EVERY = 10
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
 
-def backfill_date(date: str, dry_run = True) -> (int, None | object):
+
+def backfill_date(date: str, fg=None, dry_run=True) -> (int, None | object):
     df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if df.empty:
@@ -38,7 +39,7 @@ def backfill_date(date: str, dry_run = True) -> (int, None | object):
     df = df.merge(map_df, on='trip_id', how='inner')
 
     # Set up arrival_time as our index and main datetime column
-    df = df.dropna(subset=['arrival_time']) # Drop rows with missing arrival_time
+    df = df.dropna(subset=['arrival_time'])  # Drop rows with missing arrival_time
     df['arrival_time'] = df['arrival_time'].astype(int)
     df['arrival_time'] = pd.to_datetime(df['arrival_time'], unit='s')
     df.sort_values(by='arrival_time', inplace=True)
@@ -108,7 +109,8 @@ def backfill_date(date: str, dry_run = True) -> (int, None | object):
 
     # Rename columns
     final_metrics.columns = ['route_type', 'arrival_time_bin',
-                             'mean_delay_change_seconds', 'max_delay_change_seconds', 'min_delay_change_seconds', 'var_delay_change_seconds',
+                             'mean_delay_change_seconds', 'max_delay_change_seconds', 'min_delay_change_seconds',
+                             'var_delay_change_seconds',
                              'mean_arrival_delay_seconds', 'max_arrival_delay_seconds', 'min_arrival_delay_seconds',
                              'var_arrival_delay',
                              'mean_departure_delay_seconds', 'max_departure_delay_seconds',
@@ -133,21 +135,18 @@ def backfill_date(date: str, dry_run = True) -> (int, None | object):
     if os.environ.get("HOPSWORKS_API_KEY") is None:
         os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
 
+    if fg is None:
+        logger.warning("No Hopsworks connection. Skipping upload.")
+        return 2, None
     try:
-        project = hopsworks.login()
-        fs = project.get_feature_store()
-        delays_fg = fs.get_or_create_feature_group(
-            name='delays',
-            description='Aggregated delay metrics per hour per day',
-            version=6,
-            primary_key=['arrival_time_bin'],
-            event_time='arrival_time_bin'
-        )
-        job, _ = delays_fg.insert(final_metrics, write_options={"start_offline_materialization": False})
+        j, _ = fg.insert(final_metrics, write_options={"start_offline_materialization": False})
         delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
-        delays_fg.update_feature_description("mean_delay_change_seconds", "Mean change in delay between consecutive stops")
-        delays_fg.update_feature_description("max_delay_change_seconds", "Max change in delay between consecutive stops")
-        delays_fg.update_feature_description("min_delay_change_seconds", "Min change in delay between consecutive stops")
+        delays_fg.update_feature_description("mean_delay_change_seconds",
+                                             "Mean change in delay between consecutive stops")
+        delays_fg.update_feature_description("max_delay_change_seconds",
+                                             "Max change in delay between consecutive stops")
+        delays_fg.update_feature_description("min_delay_change_seconds",
+                                             "Min change in delay between consecutive stops")
         delays_fg.update_feature_description("var_delay_change_seconds",
                                              "Variance of change in delay between consecutive stops")
         delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
@@ -168,7 +167,7 @@ def backfill_date(date: str, dry_run = True) -> (int, None | object):
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
         return 2, None
 
-    return 0, job
+    return 0, j
 
 
 if __name__ == "__main__":
@@ -185,14 +184,31 @@ if __name__ == "__main__":
     total_dates = len(dates)
     start_time = time.time()
 
-    logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE, total_dates)
+    delays_fg = None
+    if not DRY_RUN:
+        try:
+            project = hopsworks.login()
+            fs = project.get_feature_store()
+            delays_fg = fs.get_or_create_feature_group(
+                name='delays',
+                description='Aggregated delay metrics per hour per day',
+                version=6,
+                primary_key=['arrival_time_bin'],
+                event_time='arrival_time_bin'
+            )
+        except Exception as e:
+            logger.error(f"Failed to connect to Hopsworks. Exiting. {e}")
+            sys.exit(1)
+
+    logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE,
+                total_dates)
 
     exit_codes = []
 
     for i, datetime in enumerate(dates):
         logger.info("Starting processing for date: %s", datetime)
         date = datetime.strftime("%Y-%m-%d")
-        exit_code, job = backfill_date(date, DRY_RUN)
+        exit_code, job = backfill_date(date, fg=delays_fg, dry_run=DRY_RUN)
         if exit_code == -1:
             logger.info("Dry run completed for date: %s", date)
             sys.exit(0)
@@ -205,10 +221,11 @@ if __name__ == "__main__":
         remaining_time = avg_time_per_date * (total_dates - (i + 1))
         logger.info("Completed processing for date: %s with exit code: %d", date, exit_code)
         logger.info("Progress: %d/%d (%.2f%%) - Estimated time remaining: %.2f seconds",
-                     i + 1, total_dates, (i + 1) / total_dates * 100, remaining_time)
+                    i + 1, total_dates, (i + 1) / total_dates * 100, remaining_time)
 
     logger.info("Backfill process completed for dates: %s - %s", START_DATE, END_DATE)
     successfully_uploaded = exit_codes.count(0)
     not_uploaded = exit_codes.count(2)
     missing_data = exit_codes.count(1)
-    logger.info("Summary: Successfully uploaded: %d, Not uploaded: %d, Missing data: %d", successfully_uploaded, not_uploaded, missing_data)
+    logger.info("Summary: Successfully uploaded: %d, Not uploaded: %d, Missing data: %d", successfully_uploaded,
+                not_uploaded, missing_data)
