@@ -144,10 +144,10 @@ def backfill_date(date: str, dry_run = True) -> int:
         )
         delays_fg.insert(final_metrics)
         delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
-        delays_fg.update_feature_description("mean_delay_change", "Mean change in delay between consecutive stops")
-        delays_fg.update_feature_description("max_delay_change", "Max change in delay between consecutive stops")
-        delays_fg.update_feature_description("min_delay_change", "Min change in delay between consecutive stops")
-        delays_fg.update_feature_description("var_delay_change",
+        delays_fg.update_feature_description("mean_delay_change_seconds", "Mean change in delay between consecutive stops")
+        delays_fg.update_feature_description("max_delay_change_seconds", "Max change in delay between consecutive stops")
+        delays_fg.update_feature_description("min_delay_change_seconds", "Min change in delay between consecutive stops")
+        delays_fg.update_feature_description("var_delay_change_seconds",
                                              "Variance of change in delay between consecutive stops")
         delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
         delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
