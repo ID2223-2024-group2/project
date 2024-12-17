@@ -29,7 +29,13 @@ Historical data:
 
 Current data:
 - https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
-- Pipeline: TODO
+- Pipeline (WIP): `live_feature_pipeline.py`
+  - Env Vars:
+    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
+    - `HOPSWORKS_API_KEY`: API key for Hopsworks
+    - `GTRFSR_RT_API_KEY`: API key for GTFS Regional Realtime
+    - `GTRFSR_STATIC_API_KEY`: API key for GTFS Regional Static
+  - Example: `HOPSWORKS_API_KEY=your_key DRY_RUN=False python3 live_feature_pipeline.py`
 
 General information on GTFS:
 - https://gtfs.org/documentation/overview/
@@ -41,6 +47,7 @@ General information on GTFS:
     - `START_DATE`: Start date for backfilling
     - `END_DATE`: End date for backfilling
     - `HOPSWORKS_API_KEY`: API key for Hopsworks
+- Predictions pipeline (WIP): `live_feature_pipeline.py` (same as for public transport data)
 
 ## Features
 Ideas:

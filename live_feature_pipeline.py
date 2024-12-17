@@ -9,6 +9,7 @@ from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
 from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp
+import gtfs_regional.pipeline as gp
 
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
@@ -19,7 +20,7 @@ log_file_path = os.path.join(os.path.dirname(__file__), 'live_feature.log')
 logger = setup_logger('live_feature', log_file_path)
 
 
-def get_live_weather_data(fg = None, dry_run=False) -> int:
+def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     logger.info(f"Fetching weather data for {today}")
     weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
     weather_df = wp.parse_weather_response(weather_response)
@@ -42,7 +43,16 @@ def get_live_weather_data(fg = None, dry_run=False) -> int:
     return 0
 
 
-def get_live_delays_data(fg=None, dry_run=False) -> int:
+def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
+    logger.info(f"Fetching delays data for {today}")
+    df, map_df = gp.get_gtfr_data_for_day(today, OPERATOR)
+
+    if df.empty:
+        logger.warning(f"No data available for {today}. Pipeline exiting.")
+        return 1
+
+    # TODO: Similar/Same as koda_backfill_feature_pipeline.py
+
     return 0
 
 
@@ -72,7 +82,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
     logger.info(f"Starting live feature pipeline for {today}")
-    weather_exit_code = get_live_weather_data(weather_fg, DRY_RUN)
-    delays_exit_code = get_live_delays_data(delays_fg, DRY_RUN)
+    weather_exit_code = get_live_weather_data(today, weather_fg, DRY_RUN)
+    delays_exit_code = get_live_delays_data(today, delays_fg, DRY_RUN)
 
     logger.info(f"Completed live feature pipeline for {today} with weather exit code {weather_exit_code} and delays exit code {delays_exit_code}")

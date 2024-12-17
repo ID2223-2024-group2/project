@@ -162,6 +162,6 @@ def read_pb_to_dataframe(file_path: str) -> pd.DataFrame:
     return df
 
 
-def read_static_data_to_dataframe(operator: OperatorsWithRT, static_data_type: StaticDataTypes, date:str) -> pd.DataFrame:
-    file_path = get_static_file_path(operator.value, date, static_data_type.value)
+def read_static_data_to_dataframe(operator: OperatorsWithRT, static_data_type: StaticDataTypes, date:str, data_dir=DATA_DIR) -> pd.DataFrame:
+    file_path = get_static_file_path(operator.value, date, static_data_type.value, data_dir=data_dir)
     return pd.read_csv(file_path, sep=",")

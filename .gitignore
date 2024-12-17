@@ -1,7 +1,8 @@
 .idea
 idea_exploration
 .koda_key
-.gtfsr_key
+.gtfsr_static_key
+.gtfsr_rt_key
 .openmeteo_key
 .hw_key
 
