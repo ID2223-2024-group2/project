@@ -13,16 +13,17 @@ from shared.file_logger import setup_logger
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
 OPERATOR = OperatorsWithRT.X_TRAFIK
+RUN_HW_MATERIALIZATION_EVERY = 10
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
 
-def backfill_date(date: str, dry_run = True) -> int:
+def backfill_date(date: str, dry_run = True) -> (int, None | object):
     df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if df.empty:
         logger.warning(f"No data available for {date}. Pipeline exiting.")
-        return 1
+        return 1, None
 
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
@@ -127,7 +128,7 @@ def backfill_date(date: str, dry_run = True) -> int:
 
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
-        return -1
+        return -1, None
 
     if os.environ.get("HOPSWORKS_API_KEY") is None:
         os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
@@ -142,7 +143,7 @@ def backfill_date(date: str, dry_run = True) -> int:
             primary_key=['arrival_time_bin'],
             event_time='arrival_time_bin'
         )
-        delays_fg.insert(final_metrics)
+        job, _ = delays_fg.insert(final_metrics, write_options={"start_offline_materialization": False})
         delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
         delays_fg.update_feature_description("mean_delay_change_seconds", "Mean change in delay between consecutive stops")
         delays_fg.update_feature_description("max_delay_change_seconds", "Max change in delay between consecutive stops")
@@ -165,9 +166,9 @@ def backfill_date(date: str, dry_run = True) -> int:
                                              "Average delay at the final stop of each trip")
     except Exception as e:
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
-        return 2
+        return 2, None
 
-    return 0
+    return 0, job
 
 
 if __name__ == "__main__":
@@ -191,10 +192,13 @@ if __name__ == "__main__":
     for i, datetime in enumerate(dates):
         logger.info("Starting processing for date: %s", datetime)
         date = datetime.strftime("%Y-%m-%d")
-        exit_code = backfill_date(date, DRY_RUN)
+        exit_code, job = backfill_date(date, DRY_RUN)
         if exit_code == -1:
             logger.info("Dry run completed for date: %s", date)
             sys.exit(0)
+        if exit_code == 0 and job is not None and i % RUN_HW_MATERIALIZATION_EVERY == 0:
+            logger.info("Running offline materialization jobs: %s", job.feature_group_name)
+            job.run()
         exit_codes.append(exit_code)
         elapsed_time = time.time() - start_time
         avg_time_per_date = elapsed_time / (i + 1)
