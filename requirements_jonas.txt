@@ -134,7 +134,7 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rpds-py==0.22.3
 s3transfer==0.10.4
-scikit-learn==1.6.0
+scikit-learn==1.5.2
 scipy==1.14.1
 Send2Trash==1.8.3
 setuptools==75.6.0

@@ -7,7 +7,8 @@
 
 > **Dependencies** are currently just managed with venv and there are already some conflicts, but working configurations are possible.
 `hopsworks` and the old `protobuf` version needed for KoDa appear to be the main causes of issues.
-`requirements_jonas.txt` should contain a working configuration for Win 11 python 3.12.3.
+Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
+`requirements_jonas.txt` should contain a working configuration for Ubuntu 24/Win 11 with python 3.12.3.
 
 ## Data Sources
 
