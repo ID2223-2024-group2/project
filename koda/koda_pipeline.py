@@ -53,6 +53,7 @@ def get_static_data(date: str, operator: OperatorsWithRT) -> str:
 
 def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame, pd.DataFrame):
     rt_folder_path = kp.get_rt_dir_path(operator.value, date)
+    static_folder_path = kp.get_static_dir_path(operator.value, date)
     day_feather_path = f"{rt_folder_path}/{date}.feather"
     map_df_feather_path = f"{rt_folder_path}/route_types_map.feather"
 
@@ -74,6 +75,9 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
         if os.path.exists(rt_folder_path):
             print(f"Cleaning {rt_folder_path}")
             shutil.rmtree(rt_folder_path)
+        if os.path.exists(static_folder_path):
+            print(f"Cleaning {static_folder_path}")
+            shutil.rmtree(static_folder_path)
         try:
             _ = get_rt_data(operator, date)
             _ = get_static_data(date, operator)

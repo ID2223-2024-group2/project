@@ -198,15 +198,20 @@ def create_route_types_map_df(rt_df: pd.DataFrame, trips_df: pd.DataFrame, route
                                       'shape_id'])
     routes_df = routes_df.drop(columns=['agency_id', 'route_short_name', 'route_long_name', 'route_desc'])
 
-    # Get route_id from trips if not already present (most of the time it is not, but sometimes it is!)
-    if 'route_id' not in map_df.keys():
-        map_df = map_df.merge(trips_df, on='trip_id', how='inner')
-    # Get route_type from routes if not already present (so far, it has never been present)
-    if 'route_type' not in map_df.keys():
-        map_df = map_df.merge(routes_df, on='route_id', how='inner')
+    # Drop route_id from trips_df if it exists as it is likely incomplete/incorrect
+    if 'route_id' in map_df.keys():
+        map_df.drop(columns=['route_id'], errors='ignore', inplace=True)
+    map_df = map_df.merge(trips_df, on='trip_id', how='inner')
+    # Drop route_type from routes_df if it exists
+    if 'route_type' in map_df.keys():
+        map_df.drop(columns=['route_type'], errors='ignore', inplace=True)
+    map_df = map_df.merge(routes_df, on='route_id', how='inner')
     # Remove duplicate trip_ids
     map_df = map_df.drop_duplicates(subset=['trip_id'])
     # Map route_type to strings with route_types dict
     map_df['route_type_description'] = map_df['route_type'].map(route_types)
+
+    if len(map_df) < 10:
+        print(f"Warning: map_df only has {len(map_df)} rows, likely missing data")
 
     return map_df
