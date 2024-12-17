@@ -126,14 +126,9 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, None | object):
     final_metrics.fillna(0,
                          inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
 
-    # TODO: Data expectations?
-
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
         return -1, None
-
-    if os.environ.get("HOPSWORKS_API_KEY") is None:
-        os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
 
     if fg is None:
         logger.warning("No Hopsworks connection. Skipping upload.")
@@ -186,9 +181,12 @@ if __name__ == "__main__":
 
     delays_fg = None
     if not DRY_RUN:
+        if os.environ.get("HOPSWORKS_API_KEY") is None:
+            os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
         try:
             project = hopsworks.login()
             fs = project.get_feature_store()
+            # TODO: Data expectations?
             delays_fg = fs.get_or_create_feature_group(
                 name='delays',
                 description='Aggregated delay metrics per hour per day',
