@@ -23,7 +23,8 @@ Historical data:
     - `STRIDE`: Stride for backfilling
     - `KODA_API_KEY`: API key for KoDa
     - `USE_PROCESSES`: Number of processes to use for parallel processing
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks
+    - `HOPSWORKS_API_KEY`: API key for Hopsworks#
+  - Example: `HOPSWORKS_API_KEY=your_key KODA_KEY=your_key USE_PROCESSES=4 START_DATE=2024-11-01 END_DATE=2024-11-01 STRIDE=4 DRY_RUN=False python3 koda_backfill_feature_pipeline.py`
 
 Current data:
 - https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
