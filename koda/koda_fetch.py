@@ -44,6 +44,9 @@ def fetch_gtfs_archive(url, target_path):
         return target_path
 
     response = fetch_with_exponential_backoff(url, KODA_API_TIMEOUT, KODA_MAX_RETRIES)
+    if response is None:
+        return None
+
     if response.status_code == 200:
         with open(target_path, "wb") as file:
             file.write(response.content)

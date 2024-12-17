@@ -1,9 +1,10 @@
 import time
 
 import requests
+from requests import Response
 
 
-def fetch_with_exponential_backoff(url: str, timeout: int, max_retries: int):
+def fetch_with_exponential_backoff(url: str, timeout: int, max_retries: int) -> Response | None:
     retries = 0
     wait_time = timeout
 
