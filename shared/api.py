@@ -11,7 +11,7 @@ def fetch_with_exponential_backoff(url: str, timeout: int, max_retries: int):
         try:
             response = requests.get(url, timeout=timeout)
             return response
-        except requests.exceptions.Timeout:
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectTimeout):
             retries += 1
             print(f"Timeout reached. Retrying in {wait_time} seconds...")
             time.sleep(wait_time)
