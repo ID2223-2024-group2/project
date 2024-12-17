@@ -43,7 +43,6 @@ General information on GTFS:
 ## Features
 Ideas:
 - Build small set of delay features for routes to attempt predictions per route
-- Add per-stop change in delay as feature
 
 ## Training
 Experimentation: `training_test.ipynb`
