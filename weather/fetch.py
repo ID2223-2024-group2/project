@@ -9,8 +9,8 @@ FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 def fetch_weather_archive(longitude, latitude, start_date, end_date, url=ARCHIVE_URL) -> WeatherApiResponse:
     params = {
-        "latitude": longitude,
-        "longitude": latitude,
+        "latitude": latitude,
+        "longitude": longitude,
         "start_date": start_date,
         "end_date": end_date,
         "hourly": ["temperature_2m", "apparent_temperature", "precipitation", "rain", "snowfall", "snow_depth",
@@ -23,8 +23,8 @@ def fetch_weather_archive(longitude, latitude, start_date, end_date, url=ARCHIVE
 
 def fetch_forecast_weather(longitude, latitude, url=FORECAST_URL) -> WeatherApiResponse:
     params = {
-        "latitude": longitude,
-        "longitude": latitude,
+        "latitude": latitude,
+        "longitude": longitude,
         "hourly": ["temperature_2m", "apparent_temperature", "precipitation", "rain", "snowfall", "snow_depth",
                    "cloud_cover", "wind_speed_10m", "wind_speed_100m", "wind_gusts_10m"]
     }

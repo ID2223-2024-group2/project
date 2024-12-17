@@ -5,9 +5,7 @@ from xgboost import XGBRegressor
 
 import weather.fetch as wf
 import weather.parse as wp
-
-longitude = 60.6749
-latitude = 17.1413
+from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
 
 if os.environ.get("HOPSWORKS_API_KEY") is None:
     os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
@@ -32,7 +30,7 @@ if __name__ == "__main__":
     retrieved_xgboost_model.load_model(saved_model_dir + "/model.json")
     print(f"Retrieved XGBoost model from Model Registry. {retrieved_xgboost_model}")
 
-    weather_response = wf.fetch_forecast_weather(longitude, latitude)
+    weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
     weather_df = wp.parse_weather_response(weather_response)
 
     train_features = weather_df
