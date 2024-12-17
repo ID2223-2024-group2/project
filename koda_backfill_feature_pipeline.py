@@ -31,6 +31,7 @@ def backfill_date(date: str, dry_run = True) -> int:
     ]
     df = df[columns_to_keep]
     df = kt.keep_only_latest_stop_updates(df)
+    # print(f"Unique trip_ids: {df['trip_id'].nunique()}")
 
     # Merge with map_df to get route_type
     df = df.merge(map_df, on='trip_id', how='inner')
@@ -39,7 +40,7 @@ def backfill_date(date: str, dry_run = True) -> int:
     df = df.dropna(subset=['arrival_time']) # Drop rows with missing arrival_time
     df['arrival_time'] = df['arrival_time'].astype(int)
     df['arrival_time'] = pd.to_datetime(df['arrival_time'], unit='s')
-    df = df.sort_values(by='arrival_time')
+    df.sort_values(by='arrival_time', inplace=True)
     df.set_index('arrival_time', inplace=True)
 
     # Group by route_type and resample to get stop count for each hour
@@ -50,37 +51,55 @@ def backfill_date(date: str, dry_run = True) -> int:
     # Prepare on_time column
     df["on_time"] = df["arrival_delay"].between(ON_TIME_MIN_SECONDS, ON_TIME_MAX_SECONDS)
 
+    # Identify the final stop for each trip
+    final_stops = df.groupby('trip_id').tail(1)
+    # Create a dictionary of final stop delays
+    final_stop_delays_dict = final_stops.set_index('trip_id')['arrival_delay'].to_dict()
+    # Map the final stop delays to the main DataFrame
+    df['final_stop_delay'] = df['trip_id'].map(final_stop_delays_dict)
+
     # Perform rolling metrics to capture trends
     WINDOW_SIZE = '3h'
     rolling_metrics = df.groupby('route_type').rolling(WINDOW_SIZE).agg({
-        'arrival_delay': ['mean', 'max'],
-        'departure_delay': ['mean', 'max'],
+        'arrival_delay': ['mean', 'max', 'min', 'var'],
+        'departure_delay': ['mean', 'max', 'min', 'var'],
         'on_time': 'mean',
+        'final_stop_delay': 'mean'
     }).reset_index()
 
     # Rename nested columns
     rolling_metrics.columns = ['route_type', 'arrival_time',
-                               'mean_arrival_delay', 'max_arrival_delay',
-                               'mean_departure_delay', 'max_departure_delay',
-                               'on_time_mean']
+                               'mean_arrival_delay', 'max_arrival_delay', 'min_arrival_delay', 'var_arrival_delay',
+                               'mean_departure_delay', 'max_departure_delay', 'min_departure_delay',
+                               'var_departure_delay',
+                               'mean_on_time',
+                               'mean_final_stop_delay']
     # Convert 'on_time_mean' to percentage
-    rolling_metrics['on_time_mean'] *= 100
+    rolling_metrics['mean_on_time'] *= 100
 
     # Resample rolling metrics to fixed hourly intervals to summarize day
     final_metrics = rolling_metrics.groupby('route_type').resample('h', on='arrival_time').agg({
         'mean_arrival_delay': 'mean',
         'max_arrival_delay': 'max',
+        'min_arrival_delay': 'min',
+        'var_arrival_delay': 'mean',
         'mean_departure_delay': 'mean',
         'max_departure_delay': 'max',
-        'on_time_mean': 'mean',
+        'min_departure_delay': 'min',
+        'var_departure_delay': 'mean',
+        'mean_on_time': 'mean',
+        'mean_final_stop_delay': 'mean'
     }).reset_index()
 
     # Rename columns
     final_metrics.columns = ['route_type', 'arrival_time_bin',
-                             'mean_arrival_delay_seconds', 'max_arrival_delay_seconds',
+                             'mean_arrival_delay_seconds', 'max_arrival_delay_seconds', 'min_arrival_delay_seconds',
+                             'var_arrival_delay',
                              'mean_departure_delay_seconds', 'max_departure_delay_seconds',
-                             'on_time_mean_percent']
+                             'min_departure_delay_seconds', 'var_departure_delay',
+                             'mean_on_time_percent', 'mean_final_stop_delay_seconds']
 
+    # Merge the stop count information into the final metrics DataFrame
     final_metrics = final_metrics.merge(hour_df, left_on=['route_type', 'arrival_time_bin'], right_on=['route_type', 'arrival_time'], how='left')
     final_metrics.drop(columns=['arrival_time'], inplace=True)
 
@@ -103,7 +122,7 @@ def backfill_date(date: str, dry_run = True) -> int:
         delays_fg = fs.get_or_create_feature_group(
             name='delays',
             description='Aggregated delay metrics per hour per day',
-            version=3,
+            version=5,
             primary_key=['arrival_time_bin'],
             event_time='arrival_time_bin'
         )
@@ -111,12 +130,17 @@ def backfill_date(date: str, dry_run = True) -> int:
         delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
         delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
         delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
+        delays_fg.update_feature_description("min_arrival_delay_seconds", "Min stop arrival delay in seconds")
+        delays_fg.update_feature_description("var_arrival_delay", "Variance of stop arrival delay in seconds")
         delays_fg.update_feature_description("mean_departure_delay_seconds", "Mean stop departure delay in seconds")
         delays_fg.update_feature_description("max_departure_delay_seconds", "Max stop departure delay in seconds")
-        delays_fg.update_feature_description("on_time_mean_percent", "Percentage of stops on time (-2 to 5 minutes)")
+        delays_fg.update_feature_description("min_departure_delay_seconds", "Min stop departure delay in seconds")
+        delays_fg.update_feature_description("var_departure_delay", "Variance of stop departure delay in seconds")
+        delays_fg.update_feature_description("mean_on_time_percent", "Percentage of stops on time (-3 to 5 minutes)")
         delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
         delays_fg.update_feature_description("route_type",
                                              "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
+        delays_fg.update_feature_description("mean_final_stop_delay_seconds", "Average delay at the final stop of each trip")
     except Exception as e:
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
         return 2
@@ -125,8 +149,8 @@ def backfill_date(date: str, dry_run = True) -> int:
 
 
 if __name__ == "__main__":
-    START_DATE = os.environ.get("START_DATE", "2023-01-05")
-    END_DATE = os.environ.get("END_DATE", "2023-01-07")
+    START_DATE = os.environ.get("START_DATE", "2023-12-10")
+    END_DATE = os.environ.get("END_DATE", "2023-12-11")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
 
