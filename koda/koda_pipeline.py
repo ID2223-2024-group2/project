@@ -70,6 +70,10 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
             return pd.DataFrame(), pd.DataFrame()
     else:
         print(f"Getting trip updates and static data for {operator.value} on {date}")
+        # Clean up existing faulty data if it exists
+        if os.path.exists(rt_folder_path):
+            print(f"Cleaning {rt_folder_path}")
+            shutil.rmtree(rt_folder_path)
         try:
             _ = get_rt_data(operator, date)
             _ = get_static_data(date, operator)

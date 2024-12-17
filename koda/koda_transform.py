@@ -183,6 +183,8 @@ def keep_only_latest_stop_updates(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_route_types_map_df(rt_df: pd.DataFrame, trips_df: pd.DataFrame, routes_df: pd.DataFrame) -> pd.DataFrame:
+    if rt_df.empty or trips_df.empty or routes_df.empty:
+        raise ValueError("One or more DataFrames are empty")
     # Make sure trip_id is a string for both DataFrames
     rt_df['trip_id'] = rt_df['trip_id'].astype(str)
     trips_df['trip_id'] = trips_df['trip_id'].astype(str)
@@ -196,10 +198,12 @@ def create_route_types_map_df(rt_df: pd.DataFrame, trips_df: pd.DataFrame, route
                                       'shape_id'])
     routes_df = routes_df.drop(columns=['agency_id', 'route_short_name', 'route_long_name', 'route_desc'])
 
-    # Get route_id from trips
-    map_df = map_df.merge(trips_df, on='trip_id', how='inner')
-    # Get route_type from routes
-    map_df = map_df.merge(routes_df, on='route_id', how='inner')
+    # Get route_id from trips if not already present (most of the time it is not, but sometimes it is!)
+    if 'route_id' not in map_df.keys():
+        map_df = map_df.merge(trips_df, on='trip_id', how='inner')
+    # Get route_type from routes if not already present (so far, it has never been present)
+    if 'route_type' not in map_df.keys():
+        map_df = map_df.merge(routes_df, on='route_id', how='inner')
     # Remove duplicate trip_ids
     map_df = map_df.drop_duplicates(subset=['trip_id'])
     # Map route_type to strings with route_types dict
