@@ -213,7 +213,7 @@ if __name__ == "__main__":
         if exit_code == 0 and job is not None and i % RUN_HW_MATERIALIZATION_EVERY == 0:
             logger.info("Running offline materialization jobs")
             try:
-                job.run(await_termination=True)
+                job.run(await_termination=False)
             except Exception as e:
                 logger.error(f"Failed to run offline materialization job. Skipping. {e}")
         exit_codes.append(exit_code)
