@@ -2,9 +2,10 @@ import time
 
 import requests
 from requests import Response
+import typing
 
 
-def fetch_with_exponential_backoff(url: str, timeout: int, max_retries: int) -> Response | None:
+def fetch_with_exponential_backoff(url: str, timeout: int, max_retries: int) -> typing.Union[Response, None]:
     retries = 0
     wait_time = timeout
 
