@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 
 import hopsworks
+import pandas as pd
 
 from koda.koda_constants import OperatorsWithRT
 from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
@@ -10,6 +11,7 @@ from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp
 import gtfs_regional.pipeline as gp
+import shared.features as sf
 
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
@@ -19,6 +21,9 @@ RUN_HW_MATERIALIZATION_EVERY = 10
 log_file_path = os.path.join(os.path.dirname(__file__), 'live_feature.log')
 logger = setup_logger('live_feature', log_file_path)
 
+# Enable copy-on-write for pandas to avoid SettingWithCopyWarning
+pd.options.mode.copy_on_write = True
+
 
 def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     logger.info(f"Fetching weather data for {today}")
@@ -27,7 +32,7 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     weather_df['hour'] = weather_df['date'].dt.hour
 
     if dry_run:
-        weather_df.to_csv("live_weather.csv", index=False)
+        weather_df.to_csv("live_feature_weather.csv", index=False)
         return 0
 
     if fg is None:
@@ -44,14 +49,34 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
 
 
 def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
-    logger.info(f"Fetching delays data for {today}")
     df, map_df = gp.get_gtfr_data_for_day(today, OPERATOR)
 
     if df.empty:
         logger.warning(f"No data available for {today}. Pipeline exiting.")
         return 1
 
-    # TODO: Similar/Same as koda_backfill_feature_pipeline.py
+    if map_df.empty:
+        logger.warning(f"No map data available for {today}. Pipeline exiting.")
+        return 1
+
+    print(f"df shape: {df.shape}")
+    print(f"map_df shape: {map_df.shape}")
+    # TODO: Check that the same aggregations make sense for live data
+    final_metrics = sf.build_feature_group(df, map_df)
+
+    if dry_run:
+        final_metrics.to_csv("live_feature_delays.csv", index=False)
+        return -1
+
+    if fg is None:
+        logger.warning("No Hopsworks connection. Skipping upload.")
+        return 2
+    try:
+        j, _ = fg.insert(final_metrics, write_options={"start_offline_materialization": False})
+        j.run()
+    except Exception as e:
+        logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
+        return 2
 
     return 0
 

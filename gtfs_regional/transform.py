@@ -8,12 +8,35 @@ from koda.koda_transform import sanitise_array
 
 DATA_DIR = "./dev_data/gtfsr_data"
 
-def get_rt_feather_path(operator: str, date: str, data_dir=DATA_DIR):
-    return f'{data_dir}/{operator}_rt_{date.replace("-", "_")}.feather'
+def get_last_updated_path(operator: str, data_dir=DATA_DIR) -> str:
+    return f'{data_dir}/.{operator}_last_updated'
+
+# NOTE: We are using the same file for every date to keep only the latest data
+def get_rt_feather_path(operator: str, data_dir=DATA_DIR):
+    return f'{data_dir}/{operator}_rt.feather'
 
 
-def parse_live_pb(operator: OperatorsWithRT, date: str, raw_df: pd.DataFrame) -> pd.DataFrame:
-    feather_path = get_rt_feather_path(operator.value, date)
+def get_map_df_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_route_types_map.feather"
+
+
+def write_last_updated(operator: OperatorsWithRT, last_updated: str):
+    path = get_last_updated_path(operator.value)
+    with open(path, 'w') as f:
+        f.write(last_updated)
+
+
+def read_last_updated(operator: OperatorsWithRT) -> str:
+    path = get_last_updated_path(operator.value)
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            return f.read()
+    else:
+        return ''
+
+
+def parse_live_pb(operator: OperatorsWithRT, raw_df: pd.DataFrame) -> pd.DataFrame:
+    feather_path = get_rt_feather_path(operator.value)
     if os.path.exists(feather_path):
         return pd.read_feather(feather_path)
 
