@@ -1,0 +1,163 @@
+import pandas as pd
+from hsfs.feature_group import FeatureGroup
+
+import koda.koda_transform as kt
+
+ON_TIME_MIN_SECONDS = -180
+ON_TIME_MAX_SECONDS = 300
+
+def on_time(df: pd.DataFrame) -> pd.Series:
+    """
+    Calculate the 'on_time' feature for the given DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing an 'arrival_delay' column.
+
+    Returns:
+        pd.Series: Series with the 'on_time' feature.
+    """
+    return df["arrival_delay"].between(ON_TIME_MIN_SECONDS, ON_TIME_MAX_SECONDS)
+
+
+def final_stop_delay(df: pd.DataFrame) -> pd.Series:
+    """
+    Calculate the 'final_stop_delay' feature for the given DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing 'trip_id', 'stop_sequence', and 'arrival_delay' columns.
+
+    Returns:
+        pd.Series: Series with the 'final_stop_delay' feature.
+    """
+    # Ensure the DataFrame is sorted by 'trip_id' and 'stop_sequence'
+    df = df.sort_values(by=['arrival_time'])
+
+    # Identify the final stop for each trip
+    final_stops = df.groupby('trip_id').tail(1)
+
+    # Create a dictionary of final stop delays
+    final_stop_delays_dict = final_stops.set_index('trip_id')['arrival_delay'].to_dict()
+
+    # Map the final stop delays to the main DataFrame
+    return final_stop_delays_dict
+
+
+def build_feature_group(rt_df: pd.DataFrame, map_df: pd.DataFrame) -> pd.DataFrame:
+    columns_to_keep = [
+        "trip_id", "start_date", "timestamp",
+        "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",
+        "arrival_time", "departure_delay", "departure_time"
+    ]
+    rt_df = rt_df[columns_to_keep]
+    rt_df = kt.keep_only_latest_stop_updates(rt_df)
+
+    # Merge with map_df to get route_type
+    rt_df = rt_df.merge(map_df, on='trip_id', how='inner')
+
+    # Set up arrival_time as our index and main datetime column
+    rt_df = rt_df.dropna(subset=['arrival_time'])  # Drop rows with missing arrival_time
+    rt_df['arrival_time'] = rt_df['arrival_time'].astype(int)
+    rt_df['arrival_time'] = pd.to_datetime(rt_df['arrival_time'], unit='s')
+    rt_df.sort_values(by='arrival_time', inplace=True)
+    rt_df.set_index('arrival_time', inplace=True)
+
+    # Group by route_type and resample to get stop count for each hour
+    hour_df = rt_df.groupby('route_type').resample('h').size().reset_index()
+    hour_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
+    hour_df.columns = ['route_type', 'arrival_time', 'stop_count']
+
+    rt_df['on_time'] = on_time(rt_df)
+    final_stop_delays_dict = final_stop_delay(rt_df)
+    rt_df['final_stop_delay'] = rt_df['trip_id'].map(final_stop_delays_dict)
+
+    # Sort the DataFrame by trip_id and stop_sequence
+    rt_df = rt_df.sort_values(by=['trip_id', 'stop_sequence'])
+    # Calculate the difference in delays between consecutive stops
+    rt_df['delay_change'] = rt_df.groupby('trip_id')['arrival_delay'].diff()
+
+    # Re-sort the DataFrame by arrival_time
+    rt_df.sort_values(by='arrival_time', inplace=True)
+
+    # Perform rolling metrics to capture trends
+    WINDOW_SIZE = '3h'
+    rolling_metrics = rt_df.groupby('route_type').rolling(WINDOW_SIZE).agg({
+        'delay_change': ['mean', 'max', 'min', 'var'],
+        'arrival_delay': ['mean', 'max', 'min', 'var'],
+        'departure_delay': ['mean', 'max', 'min', 'var'],
+        'on_time': 'mean',
+        'final_stop_delay': 'mean'
+    }).reset_index()
+
+    # Rename nested columns
+    rolling_metrics.columns = ['route_type', 'arrival_time',
+                               'mean_delay_change', 'max_delay_change', 'min_delay_change', 'var_delay_change',
+                               'mean_arrival_delay', 'max_arrival_delay', 'min_arrival_delay', 'var_arrival_delay',
+                               'mean_departure_delay', 'max_departure_delay', 'min_departure_delay',
+                               'var_departure_delay',
+                               'mean_on_time', 'mean_final_stop_delay']
+
+    # Convert 'on_time_mean' to percentage
+    rolling_metrics['mean_on_time'] *= 100
+
+    # Resample rolling metrics to fixed hourly intervals to summarize day
+    final_metrics = rolling_metrics.groupby('route_type').resample('h', on='arrival_time').agg({
+        'mean_delay_change': 'mean',
+        'max_delay_change': 'max',
+        'min_delay_change': 'min',
+        'var_delay_change': 'mean',
+        'mean_arrival_delay': 'mean',
+        'max_arrival_delay': 'max',
+        'min_arrival_delay': 'min',
+        'var_arrival_delay': 'mean',
+        'mean_departure_delay': 'mean',
+        'max_departure_delay': 'max',
+        'min_departure_delay': 'min',
+        'var_departure_delay': 'mean',
+        'mean_on_time': 'mean',
+        'mean_final_stop_delay': 'mean'
+    }).reset_index()
+
+    # Rename columns
+    final_metrics.columns = ['route_type', 'arrival_time_bin',
+                             'mean_delay_change_seconds', 'max_delay_change_seconds', 'min_delay_change_seconds',
+                             'var_delay_change_seconds',
+                             'mean_arrival_delay_seconds', 'max_arrival_delay_seconds', 'min_arrival_delay_seconds',
+                             'var_arrival_delay',
+                             'mean_departure_delay_seconds', 'max_departure_delay_seconds',
+                             'min_departure_delay_seconds', 'var_departure_delay',
+                             'mean_on_time_percent', 'mean_final_stop_delay_seconds']
+
+    # Merge the stop count information into the final metrics DataFrame
+    final_metrics = final_metrics.merge(hour_df, left_on=['route_type', 'arrival_time_bin'],
+                                        right_on=['route_type', 'arrival_time'], how='left')
+    final_metrics.drop(columns=['arrival_time'], inplace=True)
+
+    # TODO: Change based on model?
+    final_metrics.fillna(0, inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
+    return final_metrics
+
+
+def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
+    delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
+    delays_fg.update_feature_description("mean_delay_change_seconds",
+                                         "Mean change in delay between consecutive stops")
+    delays_fg.update_feature_description("max_delay_change_seconds",
+                                         "Max change in delay between consecutive stops")
+    delays_fg.update_feature_description("min_delay_change_seconds",
+                                         "Min change in delay between consecutive stops")
+    delays_fg.update_feature_description("var_delay_change_seconds",
+                                         "Variance of change in delay between consecutive stops")
+    delays_fg.update_feature_description("mean_arrival_delay_seconds", "Mean stop arrival delay in seconds")
+    delays_fg.update_feature_description("max_arrival_delay_seconds", "Max stop arrival delay in seconds")
+    delays_fg.update_feature_description("min_arrival_delay_seconds", "Min stop arrival delay in seconds")
+    delays_fg.update_feature_description("var_arrival_delay", "Variance of stop arrival delay in seconds")
+    delays_fg.update_feature_description("mean_departure_delay_seconds", "Mean stop departure delay in seconds")
+    delays_fg.update_feature_description("max_departure_delay_seconds", "Max stop departure delay in seconds")
+    delays_fg.update_feature_description("min_departure_delay_seconds", "Min stop departure delay in seconds")
+    delays_fg.update_feature_description("var_departure_delay", "Variance of stop departure delay in seconds")
+    delays_fg.update_feature_description("mean_on_time_percent", "Percentage of stops on time (-3 to 5 minutes)")
+    delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
+    delays_fg.update_feature_description("route_type",
+                                         "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
+    delays_fg.update_feature_description("mean_final_stop_delay_seconds",
+                                         "Average delay at the final stop of each trip")
