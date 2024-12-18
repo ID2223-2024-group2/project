@@ -2,17 +2,15 @@ import os
 from datetime import datetime
 
 import hopsworks
+import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score
 from xgboost import XGBRegressor, plot_importance
 from hsml.schema import Schema
 from hsml.model_schema import ModelSchema
 
-if os.environ.get("HOPSWORKS_API_KEY") is None:
-    os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
 
-
-def train_model(labels, train_features, y_train):
+def train_model(labels: list[str], train_features: pd.DataFrame, y_train: pd.DataFrame):
     xgb_regressor = XGBRegressor()
     xgb_regressor.fit(train_features, y_train[labels])
 
@@ -23,7 +21,7 @@ def save_model(model: object, model_dir: str) -> None:
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    model_path = os.join(model_dir, "model.json")
+    model_path = os.path.join(model_dir, "model.json")
 
     input_schema = Schema(X_train)
     output_schema = Schema(y_train)
@@ -32,9 +30,10 @@ def save_model(model: object, model_dir: str) -> None:
     schema_dict = model_schema.to_dict()
 
     model.save_model(model_path)
+    # res_dict = mse_scores
     res_dict = {
-        "MSE": mse_scores,
-        "R squared": r2_scores,
+        "MSE": mse_scores.get("mean_on_time_percent"),
+        "R squared": r2_scores.get("mean_on_time_percent"),
     }
 
     mr = project.get_model_registry()
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     )
     weather_fg = fs.get_feature_group(
         name='weather',
-        version=2,
+        version=3,
     )
     # Join delays and weather feature groups on arrival_time_bin and date respectively
     selected_features = delays_fg.select_all().join(
@@ -90,6 +89,17 @@ if __name__ == "__main__":
         query=selected_features,
     )
     print("Retrieved Feature View. ")
+    # start_date = "2023-11-01"
+    # end_date = "2024-12-20"
+    #
+    # # get a batch of data
+    # df = feature_view.get_batch_data(
+    #     start_time=pd.to_datetime(start_date),
+    #     end_time=pd.to_datetime(end_date)
+    # )
+    # df.to_feather("delays_fv_v4.feather")
+    #
+    # print(f"Retrieved data from {start_date} to {end_date}: {df.shape[0]} rows")
 
     start_date_test_data = "2024-01-01"
     test_start = datetime.strptime(start_date_test_data, "%Y-%m-%d")
