@@ -196,8 +196,7 @@ if __name__ == "__main__":
                 event_time='arrival_time_bin'
             )
         except Exception as e:
-            logger.error(f"Failed to connect to Hopsworks. Exiting. {e}")
-            sys.exit(1)
+            logger.warning(f"Failed to connect to Hopsworks. Continuing without uploads {e}")
 
     logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE,
                 total_dates)
@@ -213,7 +212,10 @@ if __name__ == "__main__":
             sys.exit(0)
         if exit_code == 0 and job is not None and i % RUN_HW_MATERIALIZATION_EVERY == 0:
             logger.info("Running offline materialization jobs")
-            job.run()
+            try:
+                job.run()
+            except Exception as e:
+                logger.error(f"Failed to run offline materialization job. Skipping. {e}")
         exit_codes.append(exit_code)
         elapsed_time = time.time() - start_time
         avg_time_per_date = elapsed_time / (i + 1)
