@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import typing
 
 import hopsworks
 import pandas as pd
@@ -19,7 +20,7 @@ log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
 
 
-def backfill_date(date: str, fg=None, dry_run=True) -> (int, None | object):
+def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, object]):
     df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if df.empty:
