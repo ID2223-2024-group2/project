@@ -59,6 +59,7 @@ def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
     print(f"df shape: {df.shape}")
     print(f"map_df shape: {map_df.shape}")
     # TODO: Check that the same aggregations make sense for live data
+    # TODO: Probably need to get stop_count from static data
     final_metrics = sf.build_feature_group(df, map_df)
 
     if dry_run:
