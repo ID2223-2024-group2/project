@@ -195,8 +195,7 @@ if __name__ == "__main__":
                 event_time='arrival_time_bin'
             )
         except Exception as e:
-            logger.error(f"Failed to connect to Hopsworks. Exiting. {e}")
-            sys.exit(1)
+            logger.warning(f"Failed to connect to Hopsworks. Continuing without uploads {e}")
 
     logger.info("Starting backfill process for dates: %s - %s and stride: %s (%s days)", START_DATE, END_DATE, STRIDE,
                 total_dates)
