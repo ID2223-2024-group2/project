@@ -13,10 +13,7 @@ import weather.parse as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
 
-ON_TIME_MIN_SECONDS = -180
-ON_TIME_MAX_SECONDS = 300
 OPERATOR = OperatorsWithRT.X_TRAFIK
-RUN_HW_MATERIALIZATION_EVERY = 10
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'live_feature.log')
 logger = setup_logger('live_feature', log_file_path)

@@ -11,8 +11,6 @@ import koda.koda_pipeline as kp
 import shared.features as sf
 from shared.file_logger import setup_logger
 
-ON_TIME_MIN_SECONDS = -180
-ON_TIME_MAX_SECONDS = 300
 OPERATOR = OperatorsWithRT.X_TRAFIK
 RUN_HW_MATERIALIZATION_EVERY = 10
 
@@ -50,8 +48,8 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
 
 
 if __name__ == "__main__":
-    START_DATE = os.environ.get("START_DATE", "2023-12-10")
-    END_DATE = os.environ.get("END_DATE", "2023-12-11")
+    START_DATE = os.environ.get("START_DATE", "2024-09-07")
+    END_DATE = os.environ.get("END_DATE", "2024-09-07")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
 
