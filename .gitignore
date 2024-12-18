@@ -9,3 +9,5 @@ idea_exploration
 dev_data/*
 !dev_data/openmeteo_data
 models
+
+protobuf_defs/gtfs-realtime.proto
