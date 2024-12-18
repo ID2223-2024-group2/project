@@ -3,6 +3,8 @@ import numpy as np
 
 LATEST_FV = 4
 LATEST_TD = 15
+NUM_FEATURES = 13
+TO_PREDICT = ["mean_arrival_delay_seconds", "max_arrival_delay_seconds", "mean_departure_delay_seconds", "max_departure_delay_seconds"]
 
 
 _split_cycle = [

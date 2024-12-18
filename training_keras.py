@@ -1,25 +1,40 @@
 import pandas as pd
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import StandardScaler
 import training_helpers
 import hopsworks
-import os
+import random
 
 
-def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, hidden_size, func):
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_validate = scaler.transform(X_validate)
+def create_model(lr=0.001, hidden=16, activation="relu"):
+    print("CREATING MODEL WITH", lr, hidden, activation)
     model = Sequential([
-        Dense(hidden_size, activation=func, input_shape=(X_train.shape[1],)),
-        Dense(1)
+        Dense(hidden, activation=activation, input_shape=(training_helpers.NUM_FEATURES,)),
+        Dense(len(training_helpers.TO_PREDICT))
     ])
-    model.compile(optimizer="adam", loss="mse", metrics=["r2_score"])
-    model.fit(X_train, Y_train, validation_data=(X_validate, Y_validate), epochs=50, batch_size=32, verbose=1)
+    optimizer = Adam(learning_rate=lr)
+    model.compile(optimizer=optimizer, loss="mse", metrics=["r2_score"], run_eagerly=True)
+    return model
+
+
+def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, hidden_size, func, deterministic=False):
+    if deterministic:
+        random.seed(42)
+        np.random.seed(42)
+        tf.random.set_seed(42)
+        tf.config.threading.set_inter_op_parallelism_threads(1)
+        tf.config.threading.set_intra_op_parallelism_threads(1)
+    model = create_model(lr, hidden_size, func)
+    model.fit(X_train, Y_train, epochs=50, batch_size=32, verbose=1)
     eval_results = model.evaluate(X_validate, Y_validate, verbose=0)
-    print(eval_results)
+    print(f"DNN[lr={lr} hidden_size={hidden_size} func={func}]")
+    r2 = eval_results[1]
+    print("\tTotal R^2:", r2)
+    return r2
 
 
 if __name__ == "__main__":
@@ -30,4 +45,9 @@ if __name__ == "__main__":
     x_all, y_all = fv.get_training_data(training_dataset_version=training_helpers.LATEST_TD)
     x_train, x_validate, x_test = training_helpers.train_validate_test_split(x_all)
     y_train, y_validate, y_test = training_helpers.train_validate_test_split(y_all)
-    train_and_evaluate(x_train, y_train, x_validate, y_validate, 0.3, 16, "relu")
+    scaler = StandardScaler()
+    x_train = scaler.fit_transform(training_helpers.strip_dates(x_train))
+    x_validate = scaler.transform(training_helpers.strip_dates(x_validate))
+    y_train = y_train[training_helpers.TO_PREDICT]
+    y_validate = y_validate[training_helpers.TO_PREDICT]
+    train_and_evaluate(x_train, y_train, x_validate, y_validate, 0.001, 16, "relu")
