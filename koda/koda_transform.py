@@ -215,3 +215,29 @@ def create_route_types_map_df(rt_df: pd.DataFrame, trips_df: pd.DataFrame, route
         print(f"Warning: map_df only has {len(map_df)} rows, likely missing data")
 
     return map_df
+
+def create_stop_count_df(date: str, stop_times_df: pd.DataFrame, route_types_map_df: pd.DataFrame) -> pd.DataFrame:
+    if stop_times_df.empty or route_types_map_df.empty:
+        raise ValueError("One or more DataFrames are empty")
+
+    # Drop rows with missing arrival_time
+    stop_times_df = stop_times_df.dropna(subset=['arrival_time'])
+
+    # Ensure trip_ids are integers for both DataFrames and merge them
+    stop_times_df['trip_id'] = stop_times_df['trip_id'].astype(str)
+    route_types_map_df['trip_id'] = route_types_map_df['trip_id'].astype(str)
+    stop_times_df = stop_times_df.merge(route_types_map_df, on='trip_id', how='inner')
+
+    # Remove arrival_times > 24:00:00 (valid in GTFS but not in pandas and not useful for our purposes)
+    stop_times_df = stop_times_df[stop_times_df['arrival_time'] < '24:00:00']
+
+    # Set up arrival_time as our index and main datetime column
+    stop_times_df['arrival_time'] = pd.to_datetime(date + ' ' + stop_times_df['arrival_time'])
+    stop_times_df.sort_values(by='arrival_time', inplace=True)
+    stop_times_df.set_index('arrival_time', inplace=True)
+
+    # Group by route_type and resample to get stop count for each hour
+    stop_count_df = stop_times_df.groupby('route_type').resample('h').size().reset_index()
+    stop_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
+    stop_count_df.columns = ['route_type', 'arrival_time', 'stop_count']
+    return stop_count_df

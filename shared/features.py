@@ -42,7 +42,7 @@ def final_stop_delay(df: pd.DataFrame) -> pd.Series:
     return final_stop_delays_dict
 
 
-def build_feature_group(rt_df: pd.DataFrame, map_df: pd.DataFrame) -> pd.DataFrame:
+def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, stop_count_df = pd.DataFrame()) -> pd.DataFrame:
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
         "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",
@@ -52,19 +52,23 @@ def build_feature_group(rt_df: pd.DataFrame, map_df: pd.DataFrame) -> pd.DataFra
     rt_df = kt.keep_only_latest_stop_updates(rt_df)
 
     # Merge with map_df to get route_type
-    rt_df = rt_df.merge(map_df, on='trip_id', how='inner')
+    rt_df['trip_id'] = rt_df['trip_id'].astype(str)
+    route_types_map_df['trip_id'] = route_types_map_df['trip_id'].astype(str)
+    rt_df = rt_df.merge(route_types_map_df, on='trip_id', how='inner')
 
     # Set up arrival_time as our index and main datetime column
     rt_df = rt_df.dropna(subset=['arrival_time'])  # Drop rows with missing arrival_time
     rt_df['arrival_time'] = rt_df['arrival_time'].astype(int)
     rt_df['arrival_time'] = pd.to_datetime(rt_df['arrival_time'], unit='s')
+
     rt_df.sort_values(by='arrival_time', inplace=True)
     rt_df.set_index('arrival_time', inplace=True)
 
     # Group by route_type and resample to get stop count for each hour
-    hour_df = rt_df.groupby('route_type').resample('h').size().reset_index()
-    hour_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
-    hour_df.columns = ['route_type', 'arrival_time', 'stop_count']
+    if stop_count_df.empty:
+        stop_count_df = rt_df.groupby('route_type').resample('h').size().reset_index()
+        stop_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
+        stop_count_df.columns = ['route_type', 'arrival_time', 'stop_count']
 
     rt_df['on_time'] = on_time(rt_df)
     final_stop_delays_dict = final_stop_delay(rt_df)
@@ -128,7 +132,7 @@ def build_feature_group(rt_df: pd.DataFrame, map_df: pd.DataFrame) -> pd.DataFra
                              'mean_on_time_percent', 'mean_final_stop_delay_seconds']
 
     # Merge the stop count information into the final metrics DataFrame
-    final_metrics = final_metrics.merge(hour_df, left_on=['route_type', 'arrival_time_bin'],
+    final_metrics = final_metrics.merge(stop_count_df, left_on=['route_type', 'arrival_time_bin'],
                                         right_on=['route_type', 'arrival_time'], how='left')
     final_metrics.drop(columns=['arrival_time'], inplace=True)
 

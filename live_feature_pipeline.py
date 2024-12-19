@@ -46,21 +46,21 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
 
 
 def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
-    df, map_df = gp.get_gtfr_data_for_day(today, OPERATOR)
+    rt_df, route_types_map_df, stop_count_df = gp.get_gtfr_data_for_day(today, OPERATOR, force_rt=True)
 
-    if df.empty:
+    if rt_df.empty:
         logger.warning(f"No data available for {today}. Pipeline exiting.")
         return 1
 
-    if map_df.empty:
+    if route_types_map_df.empty:
         logger.warning(f"No map data available for {today}. Pipeline exiting.")
         return 1
 
-    print(f"df shape: {df.shape}")
-    print(f"map_df shape: {map_df.shape}")
-    # TODO: Check that the same aggregations make sense for live data
-    # TODO: Probably need to get stop_count from static data
-    final_metrics = sf.build_feature_group(df, map_df)
+    if stop_count_df.empty:
+        logger.warning(f"No stop count data available for {today}. Pipeline exiting.")
+        return 1
+
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 
     if dry_run:
         final_metrics.to_csv("live_feature_delays.csv", index=False)
