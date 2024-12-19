@@ -2,7 +2,7 @@ import os
 import sys
 import warnings
 
-from koda.koda_constants import OperatorsWithRT, FeedType
+from shared.constants import FeedType, OperatorsWithRT
 from shared.api import fetch_with_exponential_backoff
 
 try:
@@ -43,8 +43,8 @@ def get_rt_download_path(operator: str, date: str, download_dir=DEFAULT_DOWNLOAD
     return f'{download_dir}/{operator}_rt_{date.replace("-", "_")}.pb'
 
 
-def fetch_gtfs_archive(url, target_path):
-    if os.path.exists(target_path):
+def fetch_gtfs_archive(url, target_path, force=False):
+    if os.path.exists(target_path) and not force:
         print("File already exists.")
         return target_path
 
@@ -70,7 +70,7 @@ def fetch_gtfs_static_archive(operator: OperatorsWithRT, date: str, download_dir
 
 
 def fetch_gtfs_realtime_pb(operator: OperatorsWithRT, feed: FeedType, date: str,
-                                download_dir=DEFAULT_DOWNLOAD_DIR):
+                                download_dir=DEFAULT_DOWNLOAD_DIR, force=False):
     url = REALTIME_URL.format(operator=operator.value, feed=feed.value, date=date, api_key=gtfsr_rt_key)
     target_path = get_rt_download_path(operator.value, date, download_dir)
-    return fetch_gtfs_archive(url, target_path)
+    return fetch_gtfs_archive(url, target_path, force=force)

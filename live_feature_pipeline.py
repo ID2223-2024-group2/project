@@ -5,8 +5,7 @@ from datetime import datetime
 import hopsworks
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
+from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE, OperatorsWithRT
 from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp
@@ -46,21 +45,30 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
 
 
 def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
-    df, map_df = gp.get_gtfr_data_for_day(today, OPERATOR)
+    rt_df, route_types_map_df, stop_count_df, stop_location_map_df = gp.get_gtfr_data_for_day(today, OPERATOR, force_rt=True)
 
-    if df.empty:
-        logger.warning(f"No data available for {today}. Pipeline exiting.")
+    if rt_df.empty:
+        logger.warning(f"No data available for {today}. get_live_delays_data exiting.")
         return 1
 
-    if map_df.empty:
-        logger.warning(f"No map data available for {today}. Pipeline exiting.")
+    if route_types_map_df.empty:
+        logger.warning(f"No routy type data available for {today}. get_live_delays_data exiting.")
         return 1
 
-    print(f"df shape: {df.shape}")
-    print(f"map_df shape: {map_df.shape}")
-    # TODO: Check that the same aggregations make sense for live data
-    # TODO: Probably need to get stop_count from static data
-    final_metrics = sf.build_feature_group(df, map_df)
+    if stop_count_df.empty:
+        logger.warning(f"No stop count data available for {today}. get_live_delays_data exiting.")
+        return 1
+
+    if stop_location_map_df.empty:
+        logger.warning(f"No stop location data available for {today}. get_live_delays_data exiting.")
+        return 1
+
+    # Write rt_df to csv for debugging
+    stop_location_map_df.to_csv("stop_location_map_df.csv", index=False)
+
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+
+    # TODO: Clean outlier hours due to real-time fluctuations (e.g. 0 mean delay, 0 variance...)
 
     if dry_run:
         final_metrics.to_csv("live_feature_delays.csv", index=False)

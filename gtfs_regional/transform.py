@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
+from shared.constants import OperatorsWithRT
 from koda.koda_transform import sanitise_array
 
 DATA_DIR = "./dev_data/gtfsr_data"
@@ -16,8 +16,28 @@ def get_rt_feather_path(operator: str, data_dir=DATA_DIR):
     return f'{data_dir}/{operator}_rt.feather'
 
 
-def get_map_df_feather_path(operator: str, data_dir=DATA_DIR):
+def get_route_types_map_df_feather_path(operator: str, data_dir=DATA_DIR):
     return f"{data_dir}/{operator}_route_types_map.feather"
+
+
+def get_stop_count_df_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_stop_count.feather"
+
+
+def get_trips_df_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_trips.feather"
+
+
+def get_routes_df_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_routes.feather"
+
+
+def get_stop_times_df_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_stop_times.feather"
+
+
+def get_stop_location_map_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_stop_location_map.feather"
 
 
 def write_last_updated(operator: OperatorsWithRT, last_updated: str):
@@ -35,9 +55,9 @@ def read_last_updated(operator: OperatorsWithRT) -> str:
         return ''
 
 
-def parse_live_pb(operator: OperatorsWithRT, raw_df: pd.DataFrame) -> pd.DataFrame:
+def parse_live_pb(operator: OperatorsWithRT, raw_df: pd.DataFrame, force=False) -> pd.DataFrame:
     feather_path = get_rt_feather_path(operator.value)
-    if os.path.exists(feather_path):
+    if os.path.exists(feather_path) and not force:
         return pd.read_feather(feather_path)
 
     # Force casts:

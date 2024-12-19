@@ -6,13 +6,12 @@ import typing
 import hopsworks
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
+from shared.constants import OperatorsWithRT
 import koda.koda_pipeline as kp
 import shared.features as sf
 from shared.file_logger import setup_logger
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
-RUN_HW_MATERIALIZATION_EVERY = 10
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
@@ -22,13 +21,25 @@ pd.options.mode.copy_on_write = True
 
 
 def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, object]):
-    df, map_df = kp.get_koda_data_for_day(date, OPERATOR)
+    rt_df, route_types_map_df, stop_count_df, stop_location_map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
-    if df.empty:
-        logger.warning(f"No data available for {date}. Pipeline exiting.")
+    if rt_df.empty:
+        logger.warning(f"No data available for {date}. backfill_date exiting.")
         return 1, None
 
-    final_metrics = sf.build_feature_group(df, map_df)
+    if route_types_map_df.empty:
+        logger.warning(f"No route type data available for {date}. backfill_date exiting.")
+        return 1, None
+
+    if stop_count_df.empty:
+        logger.warning(f"No stop count data available for {date}. backfill_date exiting.")
+        return 1, None
+
+    if stop_location_map_df.empty:
+        logger.warning(f"No stop location data available for {date}. backfill_date exiting.")
+        return 1, None
+
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
@@ -52,6 +63,8 @@ if __name__ == "__main__":
     END_DATE = os.environ.get("END_DATE", "2024-09-07")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
+    FG_VERSION = int(os.environ.get("FG_VERSION", 7))
+    RUN_HW_MATERIALIZATION_EVERY = int(os.environ.get("RUN_HW_MATERIALIZATION_EVERY", 10))
 
     try:
         dates = pd.date_range(START_DATE, END_DATE, freq=STRIDE)
@@ -72,7 +85,7 @@ if __name__ == "__main__":
             delays_fg = fs.get_or_create_feature_group(
                 name='delays',
                 description='Aggregated delay metrics per hour per day',
-                version=6,
+                version=FG_VERSION,
                 primary_key=['arrival_time_bin'],
                 event_time='arrival_time_bin'
             )
