@@ -2,7 +2,6 @@ import numpy as np
 from xgboost import XGBRegressor
 import training_helpers
 import hopsworks
-import os
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import StandardScaler
 
@@ -20,6 +19,13 @@ def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, max_depth):
     average_score = np.mean(list(r2s.values()))
     print("\tAverage R^2:", average_score)
     return average_score
+
+
+def train_best(params, X_all, Y_all):
+    model = XGBRegressor(**params)
+    model.fit(X_all, Y_all)
+    model.save_model(training_helpers.get_model_dir("xgboost.json"))
+    print("Saved!")
 
 
 if __name__ == "__main__":

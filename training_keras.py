@@ -10,6 +10,10 @@ import hopsworks
 import random
 
 
+EPOCHS = 15
+BATCH_SIZE = 32
+
+
 def create_model(lr=0.001, hidden=16, activation="relu"):
     print("CREATING MODEL WITH", lr, hidden, activation)
     model = Sequential([
@@ -29,12 +33,18 @@ def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, hidden_size
         tf.config.threading.set_inter_op_parallelism_threads(1)
         tf.config.threading.set_intra_op_parallelism_threads(1)
     model = create_model(lr, hidden_size, func)
-    model.fit(X_train, Y_train, epochs=50, batch_size=32, verbose=1)
+    model.fit(X_train, Y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1)
     eval_results = model.evaluate(X_validate, Y_validate, verbose=0)
     print(f"DNN[lr={lr} hidden_size={hidden_size} func={func}]")
     r2 = eval_results[1]
     print("\tTotal R^2:", r2)
     return r2
+
+
+def train_best(parameters, X_full, Y_full):
+    model = create_model(**parameters)
+    model.fit(X_full, Y_full, epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1)
+    tf.saved_model.save(model, training_helpers.get_model_dir("keras"))
 
 
 if __name__ == "__main__":
