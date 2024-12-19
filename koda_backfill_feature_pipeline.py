@@ -6,7 +6,7 @@ import typing
 import hopsworks
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
+from shared.constants import OperatorsWithRT
 import koda.koda_pipeline as kp
 import shared.features as sf
 from shared.file_logger import setup_logger
@@ -21,7 +21,7 @@ pd.options.mode.copy_on_write = True
 
 
 def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, object]):
-    rt_df, route_types_map_df, stop_count_df = kp.get_koda_data_for_day(date, OPERATOR)
+    rt_df, route_types_map_df, stop_count_df, stop_location_map_df = kp.get_koda_data_for_day(date, OPERATOR)
 
     if rt_df.empty:
         logger.warning(f"No data available for {date}. backfill_date exiting.")
@@ -33,6 +33,10 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
 
     if stop_count_df.empty:
         logger.warning(f"No stop count data available for {date}. backfill_date exiting.")
+        return 1, None
+
+    if stop_location_map_df.empty:
+        logger.warning(f"No stop location data available for {date}. backfill_date exiting.")
         return 1, None
 
     final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)

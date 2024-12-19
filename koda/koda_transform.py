@@ -8,7 +8,8 @@ import pandas as pd
 import tqdm
 
 import koda.koda_parse as kp
-from koda.koda_constants import FeedType, OperatorsWithRT
+import shared.parse as sp
+from shared.constants import FeedType, OperatorsWithRT
 
 
 def get_rt_feather_path(operator: str, feed_type: str, date: str, hour: str):
@@ -50,6 +51,10 @@ def get_feather_version_path(operator: str, date: str):
     rt_folder_path = kp.get_rt_dir_path(operator, date)
     return f"{rt_folder_path}/.feathers_complete"
 
+
+def get_stop_location_map_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/stop_location_map.feather"
 
 # For context, see getdata in pykoda project
 
@@ -113,7 +118,7 @@ def sanitise_array(df: pd.DataFrame) -> None:
 
 def _read_pb_file_helper(file_path):
     try:
-        return kp.read_pb_to_dataframe(file_path)
+        return sp.read_pb_to_dataframe(file_path)
     except FileNotFoundError:
         print(f"File {file_path} not found")
         return pd.DataFrame()

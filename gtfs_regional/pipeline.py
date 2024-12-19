@@ -3,12 +3,12 @@ import shutil
 
 import pandas as pd
 
-import shared.transform as st
-from koda.koda_constants import OperatorsWithRT, FeedType, StaticDataTypes
 import gtfs_regional.fetch as gf
-import gtfs_regional.transform as gt
 import gtfs_regional.parse as gpa
-import koda.koda_parse as kpa
+import gtfs_regional.transform as gt
+import shared.parse as sp
+import shared.transform as st
+from shared.constants import FeedType, OperatorsWithRT, StaticDataTypes
 
 
 def get_rt_data(operator: OperatorsWithRT, date: str, force=False) -> pd.DataFrame:
@@ -16,7 +16,7 @@ def get_rt_data(operator: OperatorsWithRT, date: str, force=False) -> pd.DataFra
     if pb_path is None:
         raise ValueError(f"Failed to fetch realtime data for {operator.value} on {date}")
 
-    raw_rt_df = kpa.read_pb_to_dataframe(pb_path)
+    raw_rt_df = sp.read_pb_to_dataframe(pb_path)
     rt_df = gt.parse_live_pb(operator, raw_rt_df, force=force)
     return rt_df
 
@@ -25,12 +25,14 @@ def get_static_data(date: str, operator: OperatorsWithRT, remove_archive_after=T
     static_archive_path = gf.fetch_gtfs_static_archive(operator, date)
     if static_archive_path is None:
         raise ValueError(f"Failed to fetch static data for {operator.value} on {date}")
-    static_unzipped_path = kpa.unzip_gtfs_archive(static_archive_path, data_dir=gpa.DATA_DIR, remove_archive_after=remove_archive_after)
+    static_unzipped_path = sp.unzip_gtfs_archive(static_archive_path, gpa.DATA_DIR,
+                                                 remove_archive_after=remove_archive_after)
     print(f"Unzipped static data to {static_unzipped_path}")
     return static_unzipped_path
 
 
-def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) -> (
+pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
     last_updated = gt.read_last_updated(operator)
     print(f"Getting data for {date} {operator.value} last updated: {last_updated} (force_rt={force_rt})")
 
@@ -63,8 +65,8 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         # TODO: Remove archive in production or else it will accumulate every day
         print(f"Fetching static data for {operator.value} on {date} for route types map")
         get_static_data(date, operator, remove_archive_after=False)
-        trips_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.TRIPS, date, data_dir=gpa.DATA_DIR)
-        routes_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.ROUTES, date, data_dir=gpa.DATA_DIR)
+        trips_df = sp.read_static_data_to_dataframe(operator, StaticDataTypes.TRIPS, date, gpa.DATA_DIR)
+        routes_df = sp.read_static_data_to_dataframe(operator, StaticDataTypes.ROUTES, date, gpa.DATA_DIR)
         trips_df.to_feather(trips_df_feather_path, compression='zstd', compression_level=9)
         routes_df.to_feather(routes_df_feather_path, compression='zstd', compression_level=9)
         route_types_map_df = st.create_route_types_map_df(trips_df, routes_df)
@@ -78,8 +80,7 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         # TODO: Remove archive in production or else it will accumulate every day
         print(f"Fetching static data for {operator.value} on {date}  for stop count")
         get_static_data(date, operator, remove_archive_after=False)
-        stop_times_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.STOP_TIMES, date,
-                                                          data_dir=gpa.DATA_DIR)
+        stop_times_df = sp.read_static_data_to_dataframe(operator, StaticDataTypes.STOP_TIMES, date, gpa.DATA_DIR)
         stop_times_df.to_feather(stop_times_df_feather_path, compression='zstd', compression_level=9)
         stop_count_df = st.create_stop_count_df(date, stop_times_df, route_types_map_df)
         stop_count_df.to_feather(stop_count_df_feather_path, compression='zstd', compression_level=9)
@@ -92,8 +93,7 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         # TODO: Remove archive in production or else it will accumulate every day
         print(f"Fetching static data for {operator.value} on {date} for stops")
         get_static_data(date, operator, remove_archive_after=False)
-        stops_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.STOPS, date,
-                                                          data_dir=gpa.DATA_DIR)
+        stops_df = sp.read_static_data_to_dataframe(operator, StaticDataTypes.STOPS, date, gpa.DATA_DIR)
         stop_location_map_df = st.create_stop_location_map_df(stops_df)
         stop_location_map_df.to_feather(stop_location_map_feather_path, compression='zstd', compression_level=9)
 

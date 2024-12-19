@@ -5,8 +5,7 @@ from datetime import datetime
 import hopsworks
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
+from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE, OperatorsWithRT
 from shared.file_logger import setup_logger
 import weather.fetch as wf
 import weather.parse as wp

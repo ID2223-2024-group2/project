@@ -1,6 +1,6 @@
 import pandas as pd
 
-from koda.koda_constants import route_types
+from shared.constants import route_types
 
 
 def create_stop_location_map_df(stops_df: pd.DataFrame) -> pd.DataFrame:

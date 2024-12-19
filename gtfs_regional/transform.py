@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from koda.koda_constants import OperatorsWithRT
+from shared.constants import OperatorsWithRT
 from koda.koda_transform import sanitise_array
 
 DATA_DIR = "./dev_data/gtfsr_data"

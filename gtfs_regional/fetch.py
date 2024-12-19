@@ -2,7 +2,7 @@ import os
 import sys
 import warnings
 
-from koda.koda_constants import OperatorsWithRT, FeedType
+from shared.constants import FeedType, OperatorsWithRT
 from shared.api import fetch_with_exponential_backoff
 
 try:
