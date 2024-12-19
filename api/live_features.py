@@ -41,7 +41,7 @@ def _get_live_delays_data(today: str) -> pd.DataFrame:
     return final_metrics
 
 
-def get_live_features(today: str) -> pd.DataFrame:
+def get_live_features(today: str) -> (pd.DataFrame, pd.Series):
     weather_df = _get_live_weather_data(today)
     delays_df = _get_live_delays_data(today)
 
@@ -56,4 +56,17 @@ def get_live_features(today: str) -> pd.DataFrame:
         how='inner'
     )
     feature_view = feature_view[feature_view['stop_count'] > 0]
-    return feature_view
+
+    # Keep copy of arrival_time_bin for later
+    date_col = feature_view['arrival_time_bin']
+
+    x = feature_view
+    x['hour'] = x['arrival_time_bin'].dt.hour
+    x = x.drop(['arrival_time_bin'], axis=1)
+
+    expected_columns = ['stop_count', 'temperature_2m', 'apparent_temperature', 'precipitation', 'rain',
+                        'snowfall', 'snow_depth', 'cloud_cover', 'wind_speed_10m', 'wind_speed_100m',
+                        'wind_gusts_10m', 'hour']
+    x = x[expected_columns]
+
+    return x, date_col
