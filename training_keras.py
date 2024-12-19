@@ -10,8 +10,8 @@ import hopsworks
 import random
 
 
-EPOCHS = 15
-BATCH_SIZE = 32
+EPOCHS = 50
+BATCH_SIZE = 4
 
 
 def create_model(lr=0.001, hidden=16, activation="relu"):

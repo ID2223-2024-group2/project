@@ -8,28 +8,17 @@ from xgboost import XGBRegressor
 import os
 
 xgboost_grid = {
-    "learning_rate": [0.1],
-    "max_depth": [4]
+    "learning_rate": [0.1, 0.2, 0.3, 0.4],
+    "max_depth": [2, 4, 6, 8]
 }
 
 keras_grid = {
-    "model__lr": [0.001],
-    "model__hidden": [8],
-    "model__activation": ["relu"],
+    "model__lr": [0.001, 0.005, 0.1],
+    "model__hidden": [8, 10, 16, 32],
+    "model__activation": ["relu", "sigmoid", "tanh"],
 }
 
-# xgboost_grid = {
-#     "learning_rate": [0.1, 0.2, 0.3, 0.4],
-#     "max_depth": [2, 4, 6, 8]
-# }
-#
-# keras_grid = {
-#     "model__lr": [0.001, 0.005, 0.1],
-#     "model__hidden": [8, 10, 16, 32],
-#     "model__activation": ["relu", "sigmoid", "tanh"],
-# }
-
-CV_FOLDS = 2
+CV_FOLDS = 5
 
 
 def load_data():
