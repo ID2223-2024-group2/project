@@ -46,19 +46,26 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
 
 
 def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
-    rt_df, route_types_map_df, stop_count_df = gp.get_gtfr_data_for_day(today, OPERATOR, force_rt=True)
+    rt_df, route_types_map_df, stop_count_df, stop_location_map_df = gp.get_gtfr_data_for_day(today, OPERATOR, force_rt=True)
 
     if rt_df.empty:
-        logger.warning(f"No data available for {today}. Pipeline exiting.")
+        logger.warning(f"No data available for {today}. get_live_delays_data exiting.")
         return 1
 
     if route_types_map_df.empty:
-        logger.warning(f"No map data available for {today}. Pipeline exiting.")
+        logger.warning(f"No routy type data available for {today}. get_live_delays_data exiting.")
         return 1
 
     if stop_count_df.empty:
-        logger.warning(f"No stop count data available for {today}. Pipeline exiting.")
+        logger.warning(f"No stop count data available for {today}. get_live_delays_data exiting.")
         return 1
+
+    if stop_location_map_df.empty:
+        logger.warning(f"No stop location data available for {today}. get_live_delays_data exiting.")
+        return 1
+
+    # Write rt_df to csv for debugging
+    stop_location_map_df.to_csv("stop_location_map_df.csv", index=False)
 
     final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 

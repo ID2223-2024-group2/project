@@ -36,6 +36,10 @@ def get_stop_times_df_feather_path(operator: str, data_dir=DATA_DIR):
     return f"{data_dir}/{operator}_stop_times.feather"
 
 
+def get_stop_location_map_feather_path(operator: str, data_dir=DATA_DIR):
+    return f"{data_dir}/{operator}_stop_location_map.feather"
+
+
 def write_last_updated(operator: OperatorsWithRT, last_updated: str):
     path = get_last_updated_path(operator.value)
     with open(path, 'w') as f:

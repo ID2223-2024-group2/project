@@ -3,12 +3,12 @@ import shutil
 
 import pandas as pd
 
+import shared.transform as st
 from koda.koda_constants import OperatorsWithRT, FeedType, StaticDataTypes
 import gtfs_regional.fetch as gf
 import gtfs_regional.transform as gt
 import gtfs_regional.parse as gpa
 import koda.koda_parse as kpa
-import koda.koda_transform as kt
 
 
 def get_rt_data(operator: OperatorsWithRT, date: str, force=False) -> pd.DataFrame:
@@ -30,7 +30,7 @@ def get_static_data(date: str, operator: OperatorsWithRT, remove_archive_after=T
     return static_unzipped_path
 
 
-def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
     last_updated = gt.read_last_updated(operator)
     print(f"Getting data for {date} {operator.value} last updated: {last_updated} (force_rt={force_rt})")
 
@@ -39,9 +39,14 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
     stop_count_df_feather_path = gt.get_stop_count_df_feather_path(operator.value)
 
     static_folder_path = gpa.get_static_dir_path(operator.value, date)
+
+    # NOTE: Trips, routes and stop times do not need to be kept around as they are only the basis for the features,
+    # but we keep them to speed up future new feature calculations
     trips_df_feather_path = gt.get_trips_df_feather_path(operator.value)
     routes_df_feather_path = gt.get_routes_df_feather_path(operator.value)
     stop_times_df_feather_path = gt.get_stop_times_df_feather_path(operator.value)
+
+    stop_location_map_feather_path = gt.get_stop_location_map_feather_path(operator.value)
 
     if os.path.exists(rt_feather_path) and last_updated == date and not force_rt:
         print(f"Reading existing data for {date} {rt_feather_path}")
@@ -56,29 +61,41 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
     else:
         # NOTE: We only get 50 API hits per month, so we're keeping the archive for now
         # TODO: Remove archive in production or else it will accumulate every day
-        print(f"Fetching static data for {operator.value} on {date}")
+        print(f"Fetching static data for {operator.value} on {date} for route types map")
         get_static_data(date, operator, remove_archive_after=False)
         trips_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.TRIPS, date, data_dir=gpa.DATA_DIR)
         routes_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.ROUTES, date, data_dir=gpa.DATA_DIR)
         trips_df.to_feather(trips_df_feather_path, compression='zstd', compression_level=9)
         routes_df.to_feather(routes_df_feather_path, compression='zstd', compression_level=9)
-        route_types_map_df = kt.create_route_types_map_df(trips_df, routes_df)
+        route_types_map_df = st.create_route_types_map_df(trips_df, routes_df)
         route_types_map_df.to_feather(route_types_map_df_feather_path, compression='zstd', compression_level=9)
 
     if os.path.exists(stop_count_df_feather_path) and last_updated == date:
         print(f"Reading existing data for {date} {stop_count_df_feather_path}")
         stop_count_df = pd.read_feather(stop_count_df_feather_path)
-        return rt_df, route_types_map_df, stop_count_df
     else:
         # NOTE: We only get 50 API hits per month, so we're keeping the archive for now
         # TODO: Remove archive in production or else it will accumulate every day
-        print(f"Fetching static data for {operator.value} on {date}")
+        print(f"Fetching static data for {operator.value} on {date}  for stop count")
         get_static_data(date, operator, remove_archive_after=False)
         stop_times_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.STOP_TIMES, date,
                                                           data_dir=gpa.DATA_DIR)
         stop_times_df.to_feather(stop_times_df_feather_path, compression='zstd', compression_level=9)
-        stop_count_df = kt.create_stop_count_df(date, stop_times_df, route_types_map_df)
+        stop_count_df = st.create_stop_count_df(date, stop_times_df, route_types_map_df)
         stop_count_df.to_feather(stop_count_df_feather_path, compression='zstd', compression_level=9)
+
+    if os.path.exists(stop_location_map_feather_path) and last_updated == date:
+        print(f"Reading existing data for {date} {stop_location_map_feather_path}")
+        stop_location_map_df = pd.read_feather(stop_location_map_feather_path)
+    else:
+        # NOTE: We only get 50 API hits per month, so we're keeping the archive for now
+        # TODO: Remove archive in production or else it will accumulate every day
+        print(f"Fetching static data for {operator.value} on {date} for stops")
+        get_static_data(date, operator, remove_archive_after=False)
+        stops_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.STOPS, date,
+                                                          data_dir=gpa.DATA_DIR)
+        stop_location_map_df = st.create_stop_location_map_df(stops_df)
+        stop_location_map_df.to_feather(stop_location_map_feather_path, compression='zstd', compression_level=9)
 
     gt.write_last_updated(operator, date)
 
@@ -86,4 +103,4 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         print(f"Removing {static_folder_path}")
         shutil.rmtree(static_folder_path)
 
-    return rt_df, route_types_map_df, stop_count_df
+    return rt_df, route_types_map_df, stop_count_df, stop_location_map_df

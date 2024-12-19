@@ -7,6 +7,7 @@ import pandas as pd
 import koda.koda_transform as kt
 import koda.koda_fetch as kf
 import koda.koda_parse as kp
+import shared.transform as st
 from koda.koda_constants import FeedType, OperatorsWithRT, StaticDataTypes
 
 FEATHER_DF_VERSION = 3
@@ -62,6 +63,9 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
     stop_count_df_feather_path = kt.get_stop_count_df_feather_path(operator.value, date)
 
     static_folder_path = kp.get_static_dir_path(operator.value, date)
+
+    # NOTE: Trips, routes and stop times do not need to be kept around as they are only the basis for the features,
+    # but we keep them to speed up future new feature calculations
     trips_df_feather_path = kt.get_trips_df_feather_path(operator.value, date)
     routes_df_feather_path = kt.get_routes_df_feather_path(operator.value,date)
     stop_times_df_feather_path = kt.get_stop_times_df_feather_path(operator.value, date)
@@ -101,7 +105,7 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
         routes_df = kp.read_static_data_to_dataframe(operator, StaticDataTypes.ROUTES, date)
         trips_df.to_feather(trips_df_feather_path, compression='zstd', compression_level=9)
         routes_df.to_feather(routes_df_feather_path, compression='zstd', compression_level=9)
-        route_types_map_df = kt.create_route_types_map_df(trips_df, routes_df)
+        route_types_map_df = st.create_route_types_map_df(trips_df, routes_df)
         route_types_map_df.to_feather(route_types_map_df_feather_path, compression='zstd', compression_level=9)
 
     if os.path.exists(stop_count_df_feather_path):
@@ -112,7 +116,7 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
         get_static_data(date, operator)
         stop_times_df = kp.read_static_data_to_dataframe(operator, StaticDataTypes.STOP_TIMES, date)
         stop_times_df.to_feather(stop_times_df_feather_path, compression='zstd', compression_level=9)
-        stop_count_df = kt.create_stop_count_df(date, stop_times_df, route_types_map_df)
+        stop_count_df = st.create_stop_count_df(date, stop_times_df, route_types_map_df)
         stop_count_df.to_feather(stop_count_df_feather_path, compression='zstd', compression_level=9)
 
     set_feather_version(operator, date, FEATHER_DF_VERSION)

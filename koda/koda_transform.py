@@ -8,7 +8,7 @@ import pandas as pd
 import tqdm
 
 import koda.koda_parse as kp
-from koda.koda_constants import FeedType, OperatorsWithRT, route_types
+from koda.koda_constants import FeedType, OperatorsWithRT
 
 
 def get_rt_feather_path(operator: str, feed_type: str, date: str, hour: str):
@@ -44,6 +44,7 @@ def get_routes_df_feather_path(operator: str, date: str):
 def get_stop_times_df_feather_path(operator: str, date: str):
     rt_folder_path = kp.get_rt_dir_path(operator, date)
     return f"{rt_folder_path}/stop_times.feather"
+
 
 def get_feather_version_path(operator: str, date: str):
     rt_folder_path = kp.get_rt_dir_path(operator, date)
@@ -117,7 +118,9 @@ def _read_pb_file_helper(file_path):
         print(f"File {file_path} not found")
         return pd.DataFrame()
 
-def read_rt_hour_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, hour: int, executor: ProcessPoolExecutor = None) -> (pd.DataFrame, str):
+
+def read_rt_hour_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, hour: int,
+                       executor: ProcessPoolExecutor = None) -> (pd.DataFrame, str):
     hour_filled = str(hour).zfill(2)
     feather_path = get_rt_feather_path(operator.value, feed_type.value, date, hour_filled)
     if os.path.exists(feather_path):
@@ -172,7 +175,8 @@ def read_rt_hour_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str
     return merged_df, feather_path
 
 
-def read_rt_day_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, remove_folder_after=False, executor: ProcessPoolExecutor = None) -> (pd.DataFrame, list[str]):
+def read_rt_day_to_df(operator: OperatorsWithRT, feed_type: FeedType, date: str, remove_folder_after=False,
+                      executor: ProcessPoolExecutor = None) -> (pd.DataFrame, list[str]):
     frames = []
     feather_paths = []
     for hour in tqdm.tqdm(range(24), desc=f"Reading {operator.value} {feed_type.value} {date}"):
@@ -214,55 +218,3 @@ def keep_only_latest_stop_updates(df: pd.DataFrame) -> pd.DataFrame:
 
     # Reset the index
     return df.reset_index(drop=True)
-
-
-def create_route_types_map_df(trips_df: pd.DataFrame, routes_df: pd.DataFrame) -> pd.DataFrame:
-    if trips_df.empty or routes_df.empty:
-        raise ValueError("One or more DataFrames are empty")
-    # Make sure trip_id is a string for both DataFrames
-    trips_df['trip_id'] = trips_df['trip_id'].astype(str)
-
-    # Drop unnecessary columns
-    map_df = trips_df.drop(columns=['service_id', 'trip_headsign', 'direction_id',
-                                      'shape_id'])
-    routes_df = routes_df.drop(columns=['agency_id', 'route_short_name', 'route_long_name', 'route_desc'])
-
-    # Drop route_type from routes_df if it exists
-    if 'route_type' in map_df.keys():
-        map_df.drop(columns=['route_type'], errors='ignore', inplace=True)
-    map_df = map_df.merge(routes_df, on='route_id', how='inner')
-    # Remove duplicate trip_ids
-    map_df = map_df.drop_duplicates(subset=['trip_id'])
-    # Map route_type to strings with route_types dict
-    map_df['route_type_description'] = map_df['route_type'].map(route_types)
-
-    if len(map_df) < 10:
-        print(f"Warning: map_df only has {len(map_df)} rows, likely missing data")
-
-    return map_df
-
-def create_stop_count_df(date: str, stop_times_df: pd.DataFrame, route_types_map_df: pd.DataFrame) -> pd.DataFrame:
-    if stop_times_df.empty or route_types_map_df.empty:
-        raise ValueError("One or more DataFrames are empty")
-
-    # Drop rows with missing arrival_time
-    stop_times_df = stop_times_df.dropna(subset=['arrival_time'])
-
-    # Ensure trip_ids are integers for both DataFrames and merge them
-    stop_times_df['trip_id'] = stop_times_df['trip_id'].astype(str)
-    route_types_map_df['trip_id'] = route_types_map_df['trip_id'].astype(str)
-    stop_times_df = stop_times_df.merge(route_types_map_df, on='trip_id', how='inner')
-
-    # Remove arrival_times > 24:00:00 (valid in GTFS but not in pandas and not useful for our purposes)
-    stop_times_df = stop_times_df[stop_times_df['arrival_time'] < '24:00:00']
-
-    # Set up arrival_time as our index and main datetime column
-    stop_times_df['arrival_time'] = pd.to_datetime(date + ' ' + stop_times_df['arrival_time'])
-    stop_times_df.sort_values(by='arrival_time', inplace=True)
-    stop_times_df.set_index('arrival_time', inplace=True)
-
-    # Group by route_type and resample to get stop count for each hour
-    stop_count_df = stop_times_df.groupby('route_type').resample('h').size().reset_index()
-    stop_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
-    stop_count_df.columns = ['route_type', 'arrival_time', 'stop_count']
-    return stop_count_df

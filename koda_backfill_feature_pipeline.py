@@ -12,7 +12,6 @@ import shared.features as sf
 from shared.file_logger import setup_logger
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
-RUN_HW_MATERIALIZATION_EVERY = 10
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'koda_backfill.log')
 logger = setup_logger('koda_backfill', log_file_path)
@@ -29,7 +28,7 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
         return 1, None
 
     if route_types_map_df.empty:
-        logger.warning(f"No map data available for {date}. backfill_date exiting.")
+        logger.warning(f"No route type data available for {date}. backfill_date exiting.")
         return 1, None
 
     if stop_count_df.empty:
