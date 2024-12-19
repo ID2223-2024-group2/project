@@ -43,10 +43,6 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
     routes_df_feather_path = gt.get_routes_df_feather_path(operator.value)
     stop_times_df_feather_path = gt.get_stop_times_df_feather_path(operator.value)
 
-    trips_df = pd.DataFrame()
-    routes_df = pd.DataFrame()
-    stop_times_df = pd.DataFrame()
-
     if os.path.exists(rt_feather_path) and last_updated == date and not force_rt:
         print(f"Reading existing data for {date} {rt_feather_path}")
         rt_df = pd.read_feather(rt_feather_path)
@@ -64,7 +60,10 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         get_static_data(date, operator, remove_archive_after=False)
         trips_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.TRIPS, date, data_dir=gpa.DATA_DIR)
         routes_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.ROUTES, date, data_dir=gpa.DATA_DIR)
-        route_types_map_df = kt.create_route_types_map_df(rt_df, trips_df, routes_df)
+        trips_df.to_feather(trips_df_feather_path, compression='zstd', compression_level=9)
+        routes_df.to_feather(routes_df_feather_path, compression='zstd', compression_level=9)
+        route_types_map_df = kt.create_route_types_map_df(trips_df, routes_df)
+        route_types_map_df.to_feather(route_types_map_df_feather_path, compression='zstd', compression_level=9)
 
     if os.path.exists(stop_count_df_feather_path) and last_updated == date:
         print(f"Reading existing data for {date} {stop_count_df_feather_path}")
@@ -77,19 +76,9 @@ def get_gtfr_data_for_day(date: str, operator: OperatorsWithRT, force_rt=False) 
         get_static_data(date, operator, remove_archive_after=False)
         stop_times_df = kpa.read_static_data_to_dataframe(operator, StaticDataTypes.STOP_TIMES, date,
                                                           data_dir=gpa.DATA_DIR)
-        # TODO: Get route_type map for all trips instead of the subset that got a tripupdate
+        stop_times_df.to_feather(stop_times_df_feather_path, compression='zstd', compression_level=9)
         stop_count_df = kt.create_stop_count_df(date, stop_times_df, route_types_map_df)
-
-
-    # Save stop_count_df to csv for debugging
-    stop_count_df.to_csv(f"{gpa.DATA_DIR}/stop_count_df.csv", index=False)
-
-    trips_df.to_feather(trips_df_feather_path, compression='zstd', compression_level=9)
-    routes_df.to_feather(routes_df_feather_path, compression='zstd', compression_level=9)
-    stop_times_df.to_feather(stop_times_df_feather_path, compression='zstd', compression_level=9)
-
-    route_types_map_df.to_feather(route_types_map_df_feather_path, compression='zstd', compression_level=9)
-    stop_count_df.to_feather(stop_count_df_feather_path, compression='zstd', compression_level=9)
+        stop_count_df.to_feather(stop_count_df_feather_path, compression='zstd', compression_level=9)
 
     gt.write_last_updated(operator, date)
 

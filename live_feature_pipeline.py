@@ -62,6 +62,8 @@ def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
 
     final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 
+    # TODO: Clean outlier hours due to real-time fluctuations (e.g. 0 mean delay, 0 variance...)
+
     if dry_run:
         final_metrics.to_csv("live_feature_delays.csv", index=False)
         return -1

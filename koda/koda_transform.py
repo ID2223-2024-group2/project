@@ -16,6 +16,40 @@ def get_rt_feather_path(operator: str, feed_type: str, date: str, hour: str):
     return f"{rt_folder_path}/{operator}-{feed_type.lower()}-{date}T{hour}.feather"
 
 
+def get_day_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/{date}.feather"
+
+
+def get_route_types_map_df_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/route_types_map.feather"
+
+
+def get_stop_count_df_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/stop_count.feather"
+
+
+def get_trips_df_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/trips.feather"
+
+
+def get_routes_df_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/routes.feather"
+
+
+def get_stop_times_df_feather_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/stop_times.feather"
+
+def get_feather_version_path(operator: str, date: str):
+    rt_folder_path = kp.get_rt_dir_path(operator, date)
+    return f"{rt_folder_path}/.feathers_complete"
+
+
 # For context, see getdata in pykoda project
 
 def normalize_keys(df: pd.DataFrame) -> None:
@@ -182,26 +216,17 @@ def keep_only_latest_stop_updates(df: pd.DataFrame) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def create_route_types_map_df(rt_df: pd.DataFrame, trips_df: pd.DataFrame, routes_df: pd.DataFrame) -> pd.DataFrame:
-    if rt_df.empty or trips_df.empty or routes_df.empty:
+def create_route_types_map_df(trips_df: pd.DataFrame, routes_df: pd.DataFrame) -> pd.DataFrame:
+    if trips_df.empty or routes_df.empty:
         raise ValueError("One or more DataFrames are empty")
     # Make sure trip_id is a string for both DataFrames
-    rt_df['trip_id'] = rt_df['trip_id'].astype(str)
     trips_df['trip_id'] = trips_df['trip_id'].astype(str)
 
     # Drop unnecessary columns
-    map_df = rt_df.drop(columns=['id', 'start_date', 'schedule_relationship', 'timestamp',
-                                'vehicle_id', 'stop_sequence', 'stop_id', 'arrival_delay',
-                                'arrival_time', 'arrival_uncertainty', 'departure_delay',
-                                'departure_time', 'departure_uncertainty'])
-    trips_df = trips_df.drop(columns=['service_id', 'trip_headsign', 'direction_id',
+    map_df = trips_df.drop(columns=['service_id', 'trip_headsign', 'direction_id',
                                       'shape_id'])
     routes_df = routes_df.drop(columns=['agency_id', 'route_short_name', 'route_long_name', 'route_desc'])
 
-    # Drop route_id from trips_df if it exists as it is likely incomplete/incorrect
-    if 'route_id' in map_df.keys():
-        map_df.drop(columns=['route_id'], errors='ignore', inplace=True)
-    map_df = map_df.merge(trips_df, on='trip_id', how='inner')
     # Drop route_type from routes_df if it exists
     if 'route_type' in map_df.keys():
         map_df.drop(columns=['route_type'], errors='ignore', inplace=True)
