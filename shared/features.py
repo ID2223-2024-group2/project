@@ -6,6 +6,7 @@ import koda.koda_transform as kt
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
 
+
 def on_time(df: pd.DataFrame) -> pd.Series:
     """
     Calculate the 'on_time' feature for the given DataFrame.
@@ -42,7 +43,31 @@ def final_stop_delay(df: pd.DataFrame) -> pd.Series:
     return final_stop_delays_dict
 
 
-def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, stop_count_df = pd.DataFrame()) -> pd.DataFrame:
+def windowed_lagged_features(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    if 'arrival_time' not in df.index.names:
+        raise ValueError("arrival_time must be the index of the DataFrame")
+
+    if not set(columns).issubset(df.columns):
+        raise ValueError("Columns to lag are not present in the DataFrame")
+
+    df = df.sort_values(by=['trip_id', 'stop_sequence'])
+    window_size = 5 # Number of stops to consider for lagging
+
+    # Create lagged features using windowing within each trip
+    lagged_features = df.groupby(['route_type', 'trip_id']).rolling(window=window_size, closed='left').agg({
+        'arrival_delay': 'mean',
+        'departure_delay': 'mean',
+        'delay_change': 'mean'
+    }).reset_index()
+
+    lagged_features.columns = ['route_type', 'trip_id', 'arrival_time', 'arrival_delay_lag_5stops',
+                               'departure_delay_lag_5stops', 'delay_change_lag_5stops']
+
+    return lagged_features
+
+
+def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
+                        stop_count_df=pd.DataFrame()) -> pd.DataFrame:
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
         "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",
@@ -79,11 +104,14 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, s
     # Calculate the difference in delays between consecutive stops
     rt_df['delay_change'] = rt_df.groupby('trip_id')['arrival_delay'].diff()
 
+    lagged_columns = ['arrival_delay', 'departure_delay', 'delay_change']
+    lagged_rt_df = windowed_lagged_features(rt_df, lagged_columns)
+
     # Re-sort the DataFrame by arrival_time
     rt_df.sort_values(by='arrival_time', inplace=True)
 
     # Perform rolling metrics to capture trends
-    WINDOW_SIZE = '3h'
+    WINDOW_SIZE = '20min'
     rolling_metrics = rt_df.groupby('route_type').rolling(WINDOW_SIZE).agg({
         'delay_change': ['mean', 'max', 'min', 'var'],
         'arrival_delay': ['mean', 'max', 'min', 'var'],
@@ -104,7 +132,7 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, s
     rolling_metrics['mean_on_time'] *= 100
 
     # Resample rolling metrics to fixed hourly intervals to summarize day
-    final_metrics = rolling_metrics.groupby('route_type').resample('h', on='arrival_time').agg({
+    rolling_resampled_df = rolling_metrics.groupby('route_type').resample('h', on='arrival_time').agg({
         'mean_delay_change': 'mean',
         'max_delay_change': 'max',
         'min_delay_change': 'min',
@@ -121,6 +149,18 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, s
         'mean_final_stop_delay': 'mean'
     }).reset_index()
 
+    lagged_resampled_df = lagged_rt_df.groupby('route_type').resample('h', on='arrival_time').agg({
+        'arrival_delay_lag_5stops': 'mean',
+        'departure_delay_lag_5stops': 'mean',
+        'delay_change_lag_5stops': 'mean'
+    }).reset_index()
+
+    final_metrics = rolling_resampled_df.merge(lagged_resampled_df, on=['route_type', 'arrival_time'], how='inner')
+
+    # Merge the stop count information into the final metrics DataFrame
+    final_metrics = final_metrics.merge(stop_count_df, left_on=['route_type', 'arrival_time'],
+                                        right_on=['route_type', 'arrival_time'], how='left')
+
     # Rename columns
     final_metrics.columns = ['route_type', 'arrival_time_bin',
                              'mean_delay_change_seconds', 'max_delay_change_seconds', 'min_delay_change_seconds',
@@ -129,19 +169,18 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame, s
                              'var_arrival_delay',
                              'mean_departure_delay_seconds', 'max_departure_delay_seconds',
                              'min_departure_delay_seconds', 'var_departure_delay',
-                             'mean_on_time_percent', 'mean_final_stop_delay_seconds']
+                             'mean_on_time_percent', 'mean_final_stop_delay_seconds',
+                             'mean_arrival_delay_seconds_lag_5stops', 'mean_departure_delay_seconds_lag_5stops', 'mean_delay_change_seconds_lag_5stops',
+                             'stop_count']
 
-    # Merge the stop count information into the final metrics DataFrame
-    final_metrics = final_metrics.merge(stop_count_df, left_on=['route_type', 'arrival_time_bin'],
-                                        right_on=['route_type', 'arrival_time'], how='left')
-    final_metrics.drop(columns=['arrival_time'], inplace=True)
-
-    # TODO: Change based on model?
-    final_metrics.fillna(0, inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
+    final_metrics.fillna(0,
+                         inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
     return final_metrics
 
 
 def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
+    delays_fg.update_feature_description("route_type",
+                                         "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
     delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
     delays_fg.update_feature_description("mean_delay_change_seconds",
                                          "Mean change in delay between consecutive stops")
@@ -160,8 +199,9 @@ def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
     delays_fg.update_feature_description("min_departure_delay_seconds", "Min stop departure delay in seconds")
     delays_fg.update_feature_description("var_departure_delay", "Variance of stop departure delay in seconds")
     delays_fg.update_feature_description("mean_on_time_percent", "Percentage of stops on time (-3 to 5 minutes)")
-    delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
-    delays_fg.update_feature_description("route_type",
-                                         "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
     delays_fg.update_feature_description("mean_final_stop_delay_seconds",
                                          "Average delay at the final stop of each trip")
+    delays_fg.update_feature_description("mean_arrival_delay_seconds_lag_5stops", "Mean arrival delay lagged (windowed) 5 stops")
+    delays_fg.update_feature_description("mean_departure_delay_seconds_lag_5stops", "Mean departure delay lagged 5 (windowed) stops")
+    delays_fg.update_feature_description("mean_delay_change_seconds_lag_5stops", "Mean delay change lagged 5 (windowed) stops")
+    delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
