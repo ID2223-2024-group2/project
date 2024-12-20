@@ -6,10 +6,10 @@ from shared.constants import FeedType, OperatorsWithRT
 from shared.api import fetch_with_exponential_backoff
 
 try:
-    gtfsr_rt_key = os.environ.get("GTRFSR_RT_API_KEY")
+    gtfsr_rt_key = os.environ.get("GTRFSR_RT_API_KEY").strip()
     if not gtfsr_rt_key:
         with open(".gtfsr_rt_key", "r") as f:
-            gtfsr_rt_key = f.read()
+            gtfsr_rt_key = f.read().strip()
             if not gtfsr_rt_key:
                 raise FileNotFoundError
 except FileNotFoundError:
@@ -17,10 +17,10 @@ except FileNotFoundError:
     sys.exit()
 
 try:
-    gtfsr_static_key = os.environ.get("GTRFSR_STATIC_API_KEY")
+    gtfsr_static_key = os.environ.get("GTRFSR_STATIC_API_KEY").strip()
     if not gtfsr_static_key:
         with open(".gtfsr_static_key", "r") as f:
-            gtfsr_static_key = f.read()
+            gtfsr_static_key = f.read().strip()
             if not gtfsr_static_key:
                 raise FileNotFoundError
 except FileNotFoundError:

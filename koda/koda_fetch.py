@@ -9,10 +9,10 @@ from shared.constants import FeedType, OperatorsWithRT
 from shared.api import fetch_with_exponential_backoff
 
 try:
-    koda_api_key = os.environ.get("KODA_KEY")
+    koda_api_key = os.environ.get("KODA_KEY").strip()
     if not koda_api_key:
         with open(".koda_key", "r") as f:
-            koda_api_key = f.read()
+            koda_api_key = f.read().strip()
             if not koda_api_key:
                 raise FileNotFoundError
             # print("API key found in .koda_key file.")
