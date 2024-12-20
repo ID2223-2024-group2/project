@@ -12,6 +12,7 @@ try:
             gtfsr_rt_key = f.read()
             if not gtfsr_rt_key:
                 raise FileNotFoundError
+    gtfsr_rt_key = gtfsr_rt_key.strip()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .gtfsr_rt_key file with your API key.")
     sys.exit()
@@ -23,6 +24,7 @@ try:
             gtfsr_static_key = f.read()
             if not gtfsr_static_key:
                 raise FileNotFoundError
+    gtfsr_static_key = gtfsr_static_key.strip()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .gtfsr_static_key file with your API key.")
     sys.exit()

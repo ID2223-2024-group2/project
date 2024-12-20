@@ -16,6 +16,7 @@ try:
             if not koda_api_key:
                 raise FileNotFoundError
             # print("API key found in .koda_key file.")
+    koda_api_key = koda_api_key.strip()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .koda_key file with your API key.")
     sys.exit()
