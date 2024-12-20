@@ -10,5 +10,6 @@ dev_data/*
 !dev_data/openmeteo_data
 models
 best_models
+training_datasets/*.pickle
 
 protobuf_defs/gtfs-realtime.proto

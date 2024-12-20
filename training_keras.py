@@ -4,20 +4,30 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
 import training_helpers
-import hopsworks
 import random
 
 
+FEATURE_DIM = None
 EPOCHS = 40
-BATCH_SIZE = 24
+BATCH_SIZE = 32
 
 
-def create_model(lr=0.001, hidden=16, activation="relu"):
+def init_feature_dim(X_all):
+    global FEATURE_DIM
+    FEATURE_DIM = X_all.shape[1]
+    print("Feature dim is", FEATURE_DIM)
+
+
+def create_model(lr=0.001, hidden=16, activation="relu", feature_dim=None):
+    if feature_dim is None:
+        feature_dim = FEATURE_DIM
+        if feature_dim is None:
+            raise ValueError("FEATURE_DIM is None, init_feature_dim(X) has not been called")
     print("CREATING MODEL WITH", lr, hidden, activation)
     model = Sequential([
-        Dense(hidden, activation=activation, input_shape=(training_helpers.NUM_FEATURES,)),
+        Dense(hidden, activation=activation, input_shape=(feature_dim,)),
         Dense(len(training_helpers.TO_PREDICT))
     ])
     optimizer = Adam(learning_rate=lr)
@@ -33,7 +43,7 @@ def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, hidden_size
         tf.config.threading.set_inter_op_parallelism_threads(1)
         tf.config.threading.set_intra_op_parallelism_threads(1)
     model = create_model(lr, hidden_size, func)
-    model.fit(X_train, Y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1)
+    model.fit(X_train, Y_train, validation_data=(X_validate, Y_validate), epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1)
     eval_results = model.evaluate(X_validate, Y_validate, verbose=0)
     print(f"DNN[lr={lr} hidden_size={hidden_size} func={func}]")
     r2 = eval_results[1]
@@ -48,16 +58,14 @@ def train_best(parameters, X_full, Y_full):
 
 
 if __name__ == "__main__":
-    api_key = open(".hw_key").read().strip()
-    project = hopsworks.login(api_key_value=api_key)
-    fs = project.get_feature_store("tsedmid2223_featurestore")
-    fv = fs.get_feature_view("delays_fv", training_helpers.LATEST_FV)
-    x_all, y_all = fv.get_training_data(training_dataset_version=training_helpers.LATEST_TD)
-    x_train, x_validate, x_test = training_helpers.train_validate_test_split(x_all)
-    y_train, y_validate, y_test = training_helpers.train_validate_test_split(y_all)
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(training_helpers.strip_dates(x_train))
-    x_validate = scaler.transform(training_helpers.strip_dates(x_validate))
-    y_train = y_train[training_helpers.TO_PREDICT]
-    y_validate = y_validate[training_helpers.TO_PREDICT]
-    train_and_evaluate(x_train, y_train, x_validate, y_validate, 0.001, 16, "relu")
+    x_all, y_all = training_helpers.load_dataset()
+    x_train, x_test = training_helpers.train_test_split(x_all)
+    y_train, y_test = training_helpers.train_test_split(y_all)
+    feature_scaler = StandardScaler()
+    x_train = feature_scaler.fit_transform(x_train)
+    x_test = feature_scaler.transform(x_test)
+    label_scaler = StandardScaler()
+    y_train = label_scaler.fit_transform(y_train)
+    y_test = label_scaler.transform(y_test)
+    init_feature_dim(x_all)
+    train_and_evaluate(x_train, y_train, x_test, y_test, 0.01, 16, "relu")
