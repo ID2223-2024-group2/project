@@ -2,9 +2,12 @@ import pandas as pd
 from hsfs.feature_group import FeatureGroup
 
 import koda.koda_transform as kt
+import shared.transform as st
 
 ON_TIME_MIN_SECONDS = -180
 ON_TIME_MAX_SECONDS = 300
+
+MIN_TRIP_UPDATES_PER_TIMESLOT = 1
 
 
 def on_time(df: pd.DataFrame) -> pd.Series:
@@ -67,7 +70,7 @@ def windowed_lagged_features(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 
 def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
-                        stop_count_df=pd.DataFrame()) -> (pd.DataFrame, pd.DataFrame):
+                        stop_count_df=pd.DataFrame(), min_trip_updates_per_slot=MIN_TRIP_UPDATES_PER_TIMESLOT) -> pd.DataFrame:
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
         "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",
@@ -172,9 +175,11 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
                              'mean_arrival_delay_seconds_lag_5stops', 'mean_departure_delay_seconds_lag_5stops', 'mean_delay_change_seconds_lag_5stops',
                              'stop_count']
 
+    final_metrics = st.drop_rows_with_not_enough_updates(final_metrics, trip_update_count_df, min_trip_updates_per_slot)
+
     final_metrics.fillna(0,
                          inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
-    return final_metrics, trip_update_count_df
+    return final_metrics
 
 
 def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
@@ -203,4 +208,5 @@ def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
     delays_fg.update_feature_description("mean_arrival_delay_seconds_lag_5stops", "Mean arrival delay lagged (windowed) 5 stops")
     delays_fg.update_feature_description("mean_departure_delay_seconds_lag_5stops", "Mean departure delay lagged 5 (windowed) stops")
     delays_fg.update_feature_description("mean_delay_change_seconds_lag_5stops", "Mean delay change lagged 5 (windowed) stops")
-    delays_fg.update_feature_description("stop_count", "Number of stops in the hour")
+    delays_fg.update_feature_description("stop_count", "Number of scheduled stops in the hour")
+    delays_fg.update_feature_description("trip_update_count", "Number of received trip updates in the hour")

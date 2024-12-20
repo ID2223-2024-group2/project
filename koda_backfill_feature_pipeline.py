@@ -39,7 +39,7 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
         logger.warning(f"No stop location data available for {date}. backfill_date exiting.")
         return 1, None
 
-    final_metrics, _ = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     END_DATE = os.environ.get("END_DATE", "2024-09-07")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
-    FG_VERSION = int(os.environ.get("FG_VERSION", 7))
+    FG_VERSION = int(os.environ.get("FG_VERSION", 8))
     RUN_HW_MATERIALIZATION_EVERY = int(os.environ.get("RUN_HW_MATERIALIZATION_EVERY", 10))
 
     try:
