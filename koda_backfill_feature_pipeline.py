@@ -86,7 +86,7 @@ if __name__ == "__main__":
                 name='delays',
                 description='Aggregated delay metrics per hour per day',
                 version=FG_VERSION,
-                primary_key=['arrival_time_bin'],
+                primary_key=['arrival_time_bin', 'route_type'],
                 event_time='arrival_time_bin'
             )
         except Exception as e:
