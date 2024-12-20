@@ -26,7 +26,7 @@ jobs:
 
       - name: execute daily feature backfill pipeline
         env:
-          DRY_RUN: 'true' # TODO: Change to 'false' once validated
+          DRY_RUN: 'false'
           WEATHER_FG_VERSION: '3'
           DELAYS_FG_VERSION: '8'
           KODA_KEY: ${{ secrets.KODA_KEY }}
