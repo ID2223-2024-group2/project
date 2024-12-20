@@ -18,26 +18,36 @@ Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
 - Earliest tested successful request for operator `xt`: `2022-02-01`
 - Pipeline: `koda_backfill_feature_pipeline.py`
   - Env Vars:
-    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
     - `START_DATE`: Start date for backfilling
     - `END_DATE`: End date for backfilling
     - `STRIDE`: Stride for backfilling
+    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
     - `KODA_API_KEY`: API key for KoDa
     - `USE_PROCESSES`: Number of processes to use for parallel processing
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks#
+    - `HOPSWORKS_API_KEY`: API key for Hopsworks
+    - `FG_VERSION`: Version of the delay feature group to use
+    - `RUN_HW_MATERIALIZATION_EVERY`: How often to run Hopsworks materialization jobs in days processed
   - Example: `HOPSWORKS_API_KEY=your_key KODA_KEY=your_key USE_PROCESSES=4 START_DATE=2024-11-01 END_DATE=2024-11-01 STRIDE=4 DRY_RUN=False python3 koda_backfill_feature_pipeline.py`
 
 **Daily Backfill**:
 - Pipeline: `daily_feature_backfill_pipeline.py`
+- Env Vars:
+  - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only output as csvs
+  - `WEATHER_FG_VERSION`: Version of the weather feature group to use
+  - `DELAYS_FG_VERSION`: Version of the delay feature group to use
+  - `KODA_API_KEY`: API key for KoDa
+  - `USE_PROCESSES`: Number of processes to use for parallel processing
+  - `HOPSWORKS_API_KEY`: API key for Hopsworks
 
 **Current data**:
 - Source https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
 - Pipeline: `live_feature_pipeline.py`
   - Env Vars:
     - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks
     - `GTRFSR_RT_API_KEY`: API key for GTFS Regional Realtime
     - `GTRFSR_STATIC_API_KEY`: API key for GTFS Regional Static
+    - `USE_PROCESSES`: Number of processes to use for parallel processing
+    - `HOPSWORKS_API_KEY`: API key for Hopsworks
   - Example: `HOPSWORKS_API_KEY=your_key DRY_RUN=False python3 live_feature_pipeline.py`
 
 General information on GTFS data: https://gtfs.org/documentation/overview/
@@ -53,10 +63,10 @@ Source: https://open-meteo.com/en/docs
   - `HOPSWORKS_API_KEY`: API key for Hopsworks 
 
 **Daily Backfill**:
-- Pipeline: `daily_feature_backfill_pipeline.py`
+- Pipeline: `daily_feature_backfill_pipeline.py` (same as for delays)
 
 **Predictions**
-- Pipeline: `live_feature_pipeline.py`
+- Pipeline: `live_feature_pipeline.py` (same as for delays)
 
 ## Features
 Ideas:

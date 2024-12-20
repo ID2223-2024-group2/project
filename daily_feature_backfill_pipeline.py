@@ -38,7 +38,8 @@ def backfill_recent_days(start_date: str, end_date: str, fg=None, dry_run=False)
 
 if __name__ == "__main__":
     DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
-    FG_VERSION = int(os.environ.get("FG_VERSION", 8))
+    WEATHER_FG_VERSION = int(os.environ.get("WEATHER_FG_VERSION", 3))
+    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 8))
 
     today = pd.Timestamp.now().normalize()
     yesterday = today - pd.Timedelta(days=1)
@@ -57,14 +58,14 @@ if __name__ == "__main__":
             delays_fg = fs.get_or_create_feature_group(
                 name='delays',
                 description='Aggregated delay metrics per hour per day',
-                version=FG_VERSION,
+                version=DELAYS_FG_VERSION,
                 primary_key=['arrival_time_bin'],
                 event_time='arrival_time_bin'
             )
             weather_fg = fs.get_or_create_feature_group(
                 name='weather',
                 description='Hourly weather data for Gävle',
-                version=3,
+                version=WEATHER_FG_VERSION,
                 primary_key=['date'],
                 event_time="date",
             )
