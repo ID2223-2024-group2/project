@@ -98,7 +98,7 @@ if __name__ == "__main__":
             fs = project.get_feature_store()
             delays_fg = fs.get_feature_group(
                 name='delays',
-                version=6
+                version=9
             )
             weather_fg = fs.get_feature_group(
                 name='weather',

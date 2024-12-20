@@ -63,7 +63,7 @@ if __name__ == "__main__":
     END_DATE = os.environ.get("END_DATE", "2024-09-07")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
-    FG_VERSION = int(os.environ.get("FG_VERSION", 8))
+    FG_VERSION = int(os.environ.get("FG_VERSION", 9))
     RUN_HW_MATERIALIZATION_EVERY = int(os.environ.get("RUN_HW_MATERIALIZATION_EVERY", 10))
 
     try:
