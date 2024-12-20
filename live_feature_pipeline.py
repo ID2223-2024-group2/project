@@ -11,8 +11,10 @@ import weather.fetch as wf
 import weather.parse as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
+import shared.transform as st
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
+MIN_TRIP_UPDATES_PER_TIMESLOT = 5
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'live_feature.log')
 logger = setup_logger('live_feature', log_file_path)
@@ -44,7 +46,7 @@ def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     return 0
 
 
-def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
+def get_live_delays_data(today: str, fg=None, dry_run=False, min_trip_updates_per_slot=MIN_TRIP_UPDATES_PER_TIMESLOT) -> int:
     rt_df, route_types_map_df, stop_count_df, stop_location_map_df = gp.get_gtfr_data_for_day(today, OPERATOR, force_rt=True)
 
     if rt_df.empty:
@@ -66,9 +68,8 @@ def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
     # Write rt_df to csv for debugging
     stop_location_map_df.to_csv("stop_location_map_df.csv", index=False)
 
-    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
-
-    # TODO: Clean outlier hours due to real-time fluctuations (e.g. 0 mean delay, 0 variance...)
+    final_metrics, trip_update_count_df = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics = st.drop_rows_with_not_enough_updates(final_metrics, trip_update_count_df, min_trip_updates_per_slot)
 
     if dry_run:
         final_metrics.to_csv("live_feature_delays.csv", index=False)

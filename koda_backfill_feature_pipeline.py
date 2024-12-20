@@ -39,7 +39,7 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
         logger.warning(f"No stop location data available for {date}. backfill_date exiting.")
         return 1, None
 
-    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics, _ = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
 
     if dry_run:
         final_metrics.to_csv("koda_backfill.csv", index=False)

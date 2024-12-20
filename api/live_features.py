@@ -5,8 +5,11 @@ import weather.fetch as wf
 import weather.parse as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
+import shared.transform as st
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
+MIN_TRIP_UPDATES_PER_TIMESLOT = 5
+
 
 def _get_live_weather_data(today: str) -> pd.DataFrame:
     print(f"Fetching weather data for {today}")
@@ -36,7 +39,8 @@ def _get_live_delays_data(today: str) -> pd.DataFrame:
         print(f"No stop location data available for {today}. get_live_delays_data exiting.")
         return pd.DataFrame()
 
-    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics, trip_update_count_df = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics = st.drop_rows_with_not_enough_updates(final_metrics, trip_update_count_df, MIN_TRIP_UPDATES_PER_TIMESLOT)
 
     return final_metrics
 

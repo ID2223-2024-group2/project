@@ -67,7 +67,7 @@ def windowed_lagged_features(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 
 def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
-                        stop_count_df=pd.DataFrame()) -> pd.DataFrame:
+                        stop_count_df=pd.DataFrame()) -> (pd.DataFrame, pd.DataFrame):
     columns_to_keep = [
         "trip_id", "start_date", "timestamp",
         "vehicle_id", "stop_sequence", "stop_id", "arrival_delay",
@@ -89,11 +89,10 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
     rt_df.sort_values(by='arrival_time', inplace=True)
     rt_df.set_index('arrival_time', inplace=True)
 
-    # Group by route_type and resample to get stop count for each hour
-    if stop_count_df.empty:
-        stop_count_df = rt_df.groupby('route_type').resample('h').size().reset_index()
-        stop_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
-        stop_count_df.columns = ['route_type', 'arrival_time', 'stop_count']
+    # Group by route_type and resample to get trip update counts per hour
+    trip_update_count_df = rt_df.groupby('route_type').resample('h').size().reset_index()
+    trip_update_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
+    trip_update_count_df.columns = ['route_type', 'arrival_time_bin', 'trip_update_count']
 
     rt_df['on_time'] = on_time(rt_df)
     final_stop_delays_dict = final_stop_delay(rt_df)
@@ -175,7 +174,7 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
 
     final_metrics.fillna(0,
                          inplace=True)  # Fill NaNs with 0 - During night time (00:00-02:00), no data is generally available
-    return final_metrics
+    return final_metrics, trip_update_count_df
 
 
 def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
