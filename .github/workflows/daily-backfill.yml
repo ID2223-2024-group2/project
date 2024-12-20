@@ -1,0 +1,36 @@
+name: daily-backfill
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '57 7 * * *'
+
+jobs:
+  schedule_pipelines:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v4
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.12'
+          cache: 'pip'
+
+      - name: install python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: execute daily feature backfill pipeline
+        env:
+          DRY_RUN: 'true' # TODO: Change to 'false' once validated
+          WEATHER_FG_VERSION: '3'
+          DELAYS_FG_VERSION: '8'
+          KODA_KEY: ${{ secrets.KODA_KEY }}
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          USE_PROCESSES: '1'
+        run: |
+            python daily_feature_backfill_pipeline.py

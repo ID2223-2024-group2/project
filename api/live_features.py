@@ -1,18 +1,17 @@
 import pandas as pd
 
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE, OperatorsWithRT
-import weather.fetch as wf
-import weather.parse as wp
+from shared.constants import OperatorsWithRT
+import weather.pipeline as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
+LIVE_MIN_TRIP_UPDATES_PER_TIMESLOT = 5
+
 
 def _get_live_weather_data(today: str) -> pd.DataFrame:
     print(f"Fetching weather data for {today}")
-    weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
-    weather_df = wp.parse_weather_response(weather_response)
-    weather_df['hour'] = weather_df['date'].dt.hour
+    weather_df = wp.get_forecast_weather()
 
     return weather_df
 
@@ -36,7 +35,7 @@ def _get_live_delays_data(today: str) -> pd.DataFrame:
         print(f"No stop location data available for {today}. get_live_delays_data exiting.")
         return pd.DataFrame()
 
-    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df, min_trip_updates_per_slot=LIVE_MIN_TRIP_UPDATES_PER_TIMESLOT)
 
     return final_metrics
 

@@ -50,7 +50,7 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
         return 2, None
     try:
         j, _ = fg.insert(final_metrics, write_options={"start_offline_materialization": False})
-        sf.update_feature_descriptions(fg)
+        sf.delays_update_feature_descriptions(fg)
     except Exception as e:
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
         return 2, None
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     END_DATE = os.environ.get("END_DATE", "2024-09-07")
     DRY_RUN = os.environ.get("DRY_RUN", "False").lower() == "true"
     STRIDE = pd.DateOffset(days=int(os.environ.get("STRIDE", 1)))
-    FG_VERSION = int(os.environ.get("FG_VERSION", 7))
+    FG_VERSION = int(os.environ.get("FG_VERSION", 8))
     RUN_HW_MATERIALIZATION_EVERY = int(os.environ.get("RUN_HW_MATERIALIZATION_EVERY", 10))
 
     try:

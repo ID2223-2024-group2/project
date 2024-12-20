@@ -107,6 +107,9 @@ def unzip_gtfs_archive(input_path: str, data_dir: str, remove_archive_after=Fals
     output_path = os.path.join(data_dir, input_file.replace(".7z", ""))
     if os.path.exists(output_path):
         print(f"File already unzipped to {output_path}.")
+        if remove_archive_after:
+            print(f"Removing {input_path}")
+            os.remove(input_path)
         return output_path
     compression_type = get_compression_type(input_path)
     if compression_type == "7z":

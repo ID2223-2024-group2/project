@@ -62,3 +62,15 @@ def create_route_types_map_df(trips_df: pd.DataFrame, routes_df: pd.DataFrame) -
         print(f"Warning: map_df only has {len(map_df)} rows, likely missing data")
 
     return map_df
+
+
+def drop_rows_with_not_enough_updates(metrics_df: pd.DataFrame, trip_update_count_df: pd.DataFrame,
+                                      min_trip_updates_per_slot: int, drop_column=False) -> pd.DataFrame:
+    if metrics_df.empty or trip_update_count_df.empty:
+        raise ValueError("One or more DataFrames are empty")
+
+    metrics_df = metrics_df.merge(trip_update_count_df, on=['arrival_time_bin', 'route_type'], how='left')
+    metrics_df = metrics_df[metrics_df['trip_update_count'] >= min_trip_updates_per_slot]
+    if drop_column:
+        metrics_df = metrics_df.drop(columns=['trip_update_count'])
+    return metrics_df

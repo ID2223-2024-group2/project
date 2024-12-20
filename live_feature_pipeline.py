@@ -5,14 +5,14 @@ from datetime import datetime
 import hopsworks
 import pandas as pd
 
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE, OperatorsWithRT
+from shared.constants import OperatorsWithRT
 from shared.file_logger import setup_logger
-import weather.fetch as wf
-import weather.parse as wp
+import weather.pipeline as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
 
 OPERATOR = OperatorsWithRT.X_TRAFIK
+LIVE_MIN_TRIP_UPDATES_PER_TIMESLOT = 5
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'live_feature.log')
 logger = setup_logger('live_feature', log_file_path)
@@ -23,9 +23,7 @@ pd.options.mode.copy_on_write = True
 
 def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     logger.info(f"Fetching weather data for {today}")
-    weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
-    weather_df = wp.parse_weather_response(weather_response)
-    weather_df['hour'] = weather_df['date'].dt.hour
+    weather_df = wp.get_forecast_weather()
 
     if dry_run:
         weather_df.to_csv("live_feature_weather.csv", index=False)
@@ -66,9 +64,7 @@ def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
     # Write rt_df to csv for debugging
     stop_location_map_df.to_csv("stop_location_map_df.csv", index=False)
 
-    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df)
-
-    # TODO: Clean outlier hours due to real-time fluctuations (e.g. 0 mean delay, 0 variance...)
+    final_metrics = sf.build_feature_group(rt_df, route_types_map_df, stop_count_df=stop_count_df, min_trip_updates_per_slot=LIVE_MIN_TRIP_UPDATES_PER_TIMESLOT)
 
     if dry_run:
         final_metrics.to_csv("live_feature_delays.csv", index=False)
