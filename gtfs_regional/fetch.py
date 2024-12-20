@@ -6,23 +6,25 @@ from shared.constants import FeedType, OperatorsWithRT
 from shared.api import fetch_with_exponential_backoff
 
 try:
-    gtfsr_rt_key = os.environ.get("GTRFSR_RT_API_KEY").strip()
+    gtfsr_rt_key = os.environ.get("GTRFSR_RT_API_KEY")
     if not gtfsr_rt_key:
         with open(".gtfsr_rt_key", "r") as f:
-            gtfsr_rt_key = f.read().strip()
+            gtfsr_rt_key = f.read()
             if not gtfsr_rt_key:
                 raise FileNotFoundError
+    gtfsr_rt_key = gtfsr_rt_key.strip()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .gtfsr_rt_key file with your API key.")
     sys.exit()
 
 try:
-    gtfsr_static_key = os.environ.get("GTRFSR_STATIC_API_KEY").strip()
+    gtfsr_static_key = os.environ.get("GTRFSR_STATIC_API_KEY")
     if not gtfsr_static_key:
         with open(".gtfsr_static_key", "r") as f:
-            gtfsr_static_key = f.read().strip()
+            gtfsr_static_key = f.read()
             if not gtfsr_static_key:
                 raise FileNotFoundError
+    gtfsr_static_key = gtfsr_static_key.strip()
 except FileNotFoundError:
     warnings.warn("No API key found. Please create a .gtfsr_static_key file with your API key.")
     sys.exit()
