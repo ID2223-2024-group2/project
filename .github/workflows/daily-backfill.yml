@@ -29,7 +29,7 @@ jobs:
           DRY_RUN: 'true' # TODO: Change to 'false' once validated
           WEATHER_FG_VERSION: '3'
           DELAYS_FG_VERSION: '8'
-          KODA_API_KEY: ${{ secrets.KODA_API_KEY }}
+          KODA_KEY: ${{ secrets.KODA_API_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
             python -m daily_feature_backfill_pipeline.py

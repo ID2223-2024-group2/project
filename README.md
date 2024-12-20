@@ -22,7 +22,7 @@ Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
     - `END_DATE`: End date for backfilling
     - `STRIDE`: Stride for backfilling
     - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
-    - `KODA_API_KEY`: API key for KoDa
+    - `KODA_KEY`: API key for KoDa
     - `USE_PROCESSES`: Number of processes to use for parallel processing
     - `HOPSWORKS_API_KEY`: API key for Hopsworks
     - `FG_VERSION`: Version of the delay feature group to use
@@ -35,7 +35,7 @@ Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
   - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only output as csvs
   - `WEATHER_FG_VERSION`: Version of the weather feature group to use
   - `DELAYS_FG_VERSION`: Version of the delay feature group to use
-  - `KODA_API_KEY`: API key for KoDa
+  - `KODA_KEY`: API key for KoDa
   - `USE_PROCESSES`: Number of processes to use for parallel processing
   - `HOPSWORKS_API_KEY`: API key for Hopsworks
 
