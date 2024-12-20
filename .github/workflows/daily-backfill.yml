@@ -32,4 +32,4 @@ jobs:
           KODA_KEY: ${{ secrets.KODA_API_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
-            python -m daily_feature_backfill_pipeline.py
+            python daily_feature_backfill_pipeline.py
