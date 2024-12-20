@@ -77,4 +77,10 @@ Experimentation: `training_test.ipynb`
 
 ## Serving
 `api_main.py` is the entry point for an example of how the model could be served with live data.
-Run it with `fastapi run api_main.py` (for development).
+
+Prerequisite:
+- `pip install fastapi[standard]`
+
+Run it with:
+- `fastapi run api_main.py` (for development).
+- `uvicorn api_main:app --host 0.0.0.0 --port 8000` (for production).
