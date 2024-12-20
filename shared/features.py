@@ -182,7 +182,7 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
     return final_metrics
 
 
-def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
+def delays_update_feature_descriptions(delays_fg: FeatureGroup) -> None:
     delays_fg.update_feature_description("route_type",
                                          "Type of route (see https://www.trafiklab.se/api/gtfs-datasets/overview/extensions/#gtfs-regional-gtfs-sweden-3)")
     delays_fg.update_feature_description("arrival_time_bin", "Hourly time bin by stop arrival time")
@@ -210,3 +210,18 @@ def update_feature_descriptions(delays_fg: FeatureGroup) -> None:
     delays_fg.update_feature_description("mean_delay_change_seconds_lag_5stops", "Mean delay change lagged 5 (windowed) stops")
     delays_fg.update_feature_description("stop_count", "Number of scheduled stops in the hour")
     delays_fg.update_feature_description("trip_update_count", "Number of received trip updates in the hour")
+
+
+def weather_update_feature_descriptions(weather_fg: FeatureGroup) -> None:
+    weather_fg.update_feature_description("apparent_temperature", "Apparent temperature in Celsius")
+    weather_fg.update_feature_description("cloud_cover", "Cloud cover in percentage")
+    weather_fg.update_feature_description("date", "Timestamp of the weather data")
+    weather_fg.update_feature_description("precipitation", "Precipitation in mm")
+    weather_fg.update_feature_description("rain", "Rainfall in mm")
+    weather_fg.update_feature_description("snow_depth", "Snow depth in m")
+    weather_fg.update_feature_description("snowfall", "Snowfall in cm")
+    weather_fg.update_feature_description("temperature_2m", "Temperature at 2m in Celsius")
+    weather_fg.update_feature_description("wind_gusts_10m", "Wind gusts at 10m in km/h")
+    weather_fg.update_feature_description("wind_speed_100m", "Wind speed at 100m in km/h")
+    weather_fg.update_feature_description("wind_speed_10m", "Wind speed at 10m in km/h")
+    weather_fg.update_feature_description("hour", "Hour of the day")

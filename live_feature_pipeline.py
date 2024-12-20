@@ -5,10 +5,9 @@ from datetime import datetime
 import hopsworks
 import pandas as pd
 
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE, OperatorsWithRT
+from shared.constants import OperatorsWithRT
 from shared.file_logger import setup_logger
-import weather.fetch as wf
-import weather.parse as wp
+import weather.pipeline as wp
 import gtfs_regional.pipeline as gp
 import shared.features as sf
 
@@ -24,9 +23,7 @@ pd.options.mode.copy_on_write = True
 
 def get_live_weather_data(today: str, fg = None, dry_run=False) -> int:
     logger.info(f"Fetching weather data for {today}")
-    weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
-    weather_df = wp.parse_weather_response(weather_response)
-    weather_df['hour'] = weather_df['date'].dt.hour
+    weather_df = wp.get_forecast_weather()
 
     if dry_run:
         weather_df.to_csv("live_feature_weather.csv", index=False)

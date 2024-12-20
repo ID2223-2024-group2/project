@@ -50,7 +50,7 @@ def backfill_date(date: str, fg=None, dry_run=True) -> (int, typing.Union[None, 
         return 2, None
     try:
         j, _ = fg.insert(final_metrics, write_options={"start_offline_materialization": False})
-        sf.update_feature_descriptions(fg)
+        sf.delays_update_feature_descriptions(fg)
     except Exception as e:
         logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
         return 2, None

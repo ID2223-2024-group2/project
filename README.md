@@ -13,10 +13,10 @@ Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
 ## Data Sources
 
 ### Public Transport Delays
-Historical data:
-- https://www.trafiklab.se/api/trafiklab-apis/koda/
+**Historical Backfill**:
+- Source: https://www.trafiklab.se/api/trafiklab-apis/koda/
 - Earliest tested successful request for operator `xt`: `2022-02-01`
-- Backfill Pipeline: `koda_backfill_feature_pipeline.py`
+- Pipeline: `koda_backfill_feature_pipeline.py`
   - Env Vars:
     - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
     - `START_DATE`: Start date for backfilling
@@ -27,9 +27,12 @@ Historical data:
     - `HOPSWORKS_API_KEY`: API key for Hopsworks#
   - Example: `HOPSWORKS_API_KEY=your_key KODA_KEY=your_key USE_PROCESSES=4 START_DATE=2024-11-01 END_DATE=2024-11-01 STRIDE=4 DRY_RUN=False python3 koda_backfill_feature_pipeline.py`
 
-Current data:
-- https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
-- Pipeline (WIP): `live_feature_pipeline.py`
+**Daily Backfill**:
+- Pipeline: `daily_feature_backfill_pipeline.py`
+
+**Current data**:
+- Source https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
+- Pipeline: `live_feature_pipeline.py`
   - Env Vars:
     - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
     - `HOPSWORKS_API_KEY`: API key for Hopsworks
@@ -37,17 +40,23 @@ Current data:
     - `GTRFSR_STATIC_API_KEY`: API key for GTFS Regional Static
   - Example: `HOPSWORKS_API_KEY=your_key DRY_RUN=False python3 live_feature_pipeline.py`
 
-General information on GTFS:
-- https://gtfs.org/documentation/overview/
+General information on GTFS data: https://gtfs.org/documentation/overview/
 
 ### Weather Data
-- https://open-meteo.com/en/docs
-- Backfill pipeline: `weather_backfill_feature_pipeline.py`
-  - Env Vars:
-    - `START_DATE`: Start date for backfilling
-    - `END_DATE`: End date for backfilling
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks
-- Predictions pipeline (WIP): `live_feature_pipeline.py` (same as for public transport data)
+Source: https://open-meteo.com/en/docs
+
+**Historical Backfill**:
+- Pipeline:`weather_backfill_feature_pipeline.py`
+- Env Vars:
+  - `START_DATE`: Start date for backfilling
+  - `END_DATE`: End date for backfilling
+  - `HOPSWORKS_API_KEY`: API key for Hopsworks 
+
+**Daily Backfill**:
+- Pipeline: `daily_feature_backfill_pipeline.py`
+
+**Predictions**
+- Pipeline: `live_feature_pipeline.py`
 
 ## Features
 Ideas:

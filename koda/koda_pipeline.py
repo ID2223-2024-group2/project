@@ -73,8 +73,9 @@ def get_koda_data_for_day(date: str, operator: OperatorsWithRT) -> (pd.DataFrame
 
     stop_location_map_feather_path = kt.get_stop_location_map_feather_path(operator.value, date)
 
-    if get_feather_version(operator, date) < 2:
-        print(f"Old feather version found for {operator.value} on {date}")
+    feather_version = get_feather_version(operator, date)
+    if feather_version < 2:
+        print(f"Old or missing feather version ({feather_version}) found for {operator.value} on {date}")
         # Clean up existing malformatted data if it exists
         if os.path.exists(rt_folder_path):
             print(f"Cleaning {rt_folder_path}")

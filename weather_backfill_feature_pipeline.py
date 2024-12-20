@@ -4,19 +4,39 @@ import sys
 import hopsworks
 import pandas as pd
 
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
 from shared.file_logger import setup_logger
-import weather.fetch as wf
-import weather.parse as wp
-
-SAVE_TO_HW = True
+import shared.features as sf
+import weather.pipeline as wp
 
 log_file_path = os.path.join(os.path.dirname(__file__), 'weather_backfill.log')
 logger = setup_logger('weather_backfill', log_file_path)
 
+
+def backfill_days(start_date: str, end_date: str, fg=None, dry_run=False) -> int:
+    print(f"Fetching weather data for {start_date} - {end_date}")
+    df = wp.get_historical_weather(start_date, end_date)
+
+    if dry_run:
+        df.to_csv("weather_backfill.csv", index=False)
+        return -1
+
+    if fg is None:
+        logger.warning("No Hopsworks connection. Skipping upload.")
+        return 2
+    try:
+        fg.insert(df)
+        sf.weather_update_feature_descriptions(fg)
+    except Exception as e:
+        logger.warning(f"Failed to connect to Hopsworks and skipping upload. {e}")
+        return 2
+
+    return 0
+
+
 if __name__ == "__main__":
     START_DATE = os.environ.get("START_DATE", "2023-01-01")
     END_DATE = os.environ.get("END_DATE", "2024-12-15")
+    DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
 
     try:
         dates = pd.date_range(START_DATE, END_DATE)
@@ -25,42 +45,27 @@ if __name__ == "__main__":
         sys.exit(1)
     total_dates = len(dates)
 
+    weather_fg = None
+    if not DRY_RUN:
+        if os.environ.get("HOPSWORKS_API_KEY") is None:
+            os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
+
+        try:
+            project = hopsworks.login()
+            fs = project.get_feature_store()
+
+            weather_fg = fs.get_or_create_feature_group(
+                name='weather',
+                description='Hourly weather data for Gävle',
+                version=3,
+                primary_key=['date'],
+                event_time="date",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to connect to Hopsworks. Continuing without uploads {e}")
+
     logger.info("Starting backfill process for dates: %s - %s (%s days)", START_DATE, END_DATE, total_dates)
-    response = wf.fetch_weather_archive(GAEVLE_LONGITUDE, GAEVLE_LATITUDE, START_DATE, END_DATE)
-    df = wp.parse_weather_response(response)
-    # Add hour as a separate column
-    df['hour'] = df['date'].dt.hour
+    exit_code = backfill_days(START_DATE, END_DATE, dry_run=DRY_RUN)
+    logger.info("Backfill process completed for dates: %s - %s with exit code: %s", START_DATE, END_DATE, exit_code)
 
-    # Column list: [ apparent_temperature, cloud_cover, date, precipitation, rain, snow_depth, snowfall, temperature_2m, wind_gusts_10m, wind_speed_100m, wind_speed_10m]
-
-    logger.info("Parsed %s rows of weather data", len(df))
-    if not SAVE_TO_HW:
-        df.to_csv("weather_backfill.csv", index=False)
-        sys.exit(0)
-
-    if os.environ.get("HOPSWORKS_API_KEY") is None:
-        os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
-
-    project = hopsworks.login()
-    fs = project.get_feature_store()
-
-    weather_fg = fs.get_or_create_feature_group(
-        name='weather',
-        description='Hourly weather data for Gävle',
-        version=3,
-        primary_key=['date'],
-        event_time="date",
-    )
-    weather_fg.insert(df)
-    weather_fg.update_feature_description("apparent_temperature", "Apparent temperature in Celsius")
-    weather_fg.update_feature_description("cloud_cover", "Cloud cover in percentage")
-    weather_fg.update_feature_description("date", "Timestamp of the weather data")
-    weather_fg.update_feature_description("precipitation", "Precipitation in mm")
-    weather_fg.update_feature_description("rain", "Rainfall in mm")
-    weather_fg.update_feature_description("snow_depth", "Snow depth in m")
-    weather_fg.update_feature_description("snowfall", "Snowfall in cm")
-    weather_fg.update_feature_description("temperature_2m", "Temperature at 2m in Celsius")
-    weather_fg.update_feature_description("wind_gusts_10m", "Wind gusts at 10m in km/h")
-    weather_fg.update_feature_description("wind_speed_100m", "Wind speed at 100m in km/h")
-    weather_fg.update_feature_description("wind_speed_10m", "Wind speed at 10m in km/h")
-    weather_fg.update_feature_description("hour", "Hour of the day")
+    sys.exit(exit_code)
