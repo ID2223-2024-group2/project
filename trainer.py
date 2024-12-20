@@ -36,7 +36,9 @@ def load_data():
 def grid_search(X_all, Y_all):
     X_all = training_helpers.strip_dates(X_all)
     Y_all = Y_all[training_helpers.TO_PREDICT]
+    print("Starting XGBoost search")
     grid_search_xgboost(X_all, Y_all)
+    print("Starting Keras search")
     grid_search_keras(X_all, Y_all)
 
 
