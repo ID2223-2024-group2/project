@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import os
 
-LATEST_FV = 4
-LATEST_TD = 20
-DATASET = 7517
-TO_USE = ["route_type", "stop_count", "temperature_2m", "snowfall", "snow_depth", "wind_gusts_10m", "hour"]
+LATEST_FV = 5
+LATEST_TD = 1
+DATASET = 6055
+TO_USE = ["mean_arrival_delay_seconds_lag_5stops", "mean_departure_delay_seconds_lag_5stops", "mean_delay_change_seconds_lag_5stops", "route_type", "stop_count", "temperature_2m", "snowfall", "snow_depth", "wind_gusts_10m", "hour"]
 #TO_USE = ["route_type", "stop_count", "temperature_2m", "apparent_temperature", "precipitation", "rain", "snowfall", "snow_depth", "cloud_cover", "wind_speed_10m", "wind_speed_100m", "wind_gusts_10m", "hour"]
 TO_PREDICT = ["mean_on_time_percent"]
 
@@ -42,11 +42,17 @@ def one_hot(df):
     return df
 
 
-def train_test_split(df):
+def train_test_split_cyclical(df):
     total_length = len(df)
     assignments = pd.Series([_split_cycle_2[i % len(_split_cycle_2)] for i in range(total_length)])
     train = df.loc[assignments == "train"]
     test = df.loc[assignments == "test"]
+    return train, test
+
+
+def train_test_split_time(df, test_start):
+    train = df.loc[df["arrival_time_bin"] < test_start]
+    test = df.loc[df["arrival_time_bin"] >= test_start]
     return train, test
 
 
@@ -60,14 +66,34 @@ def train_validate_test_split(df):
     return train, validate, test
 
 
-def load_dataset():
+def load_dataset(strip=True):
     dataset_dir = "training_datasets"
     x_name = os.path.join(dataset_dir, f"features_{DATASET}.pickle")
     y_name = os.path.join(dataset_dir, f"labels_{DATASET}.pickle")
-    x_all = strip_dates(pd.read_pickle(x_name))
-    x_all = one_hot(x_all[TO_USE])
+    if strip:
+        x_all = strip_dates(pd.read_pickle(x_name))
+    else:
+        x_all = pd.read_pickle(x_name)
+    x_all = one_hot(x_all[TO_USE if strip else TO_USE + ["arrival_time_bin", "date"]])
     y_all = pd.read_pickle(y_name)[TO_PREDICT]
     return x_all, y_all
+
+
+def load_xy_time(stamp):
+    x_all, y_all = load_dataset(strip=False)
+    y_all["arrival_time_bin"] = x_all["arrival_time_bin"]
+    x_train, x_test = train_test_split_time(x_all, stamp)
+    y_train, y_test = train_test_split_time(y_all, stamp)
+    y_train.drop("arrival_time_bin", axis=1, inplace=True)
+    y_test.drop("arrival_time_bin", axis=1, inplace=True)
+    return strip_dates(x_train), y_train, strip_dates(x_test), y_test
+
+
+def load_xy_cyclical():
+    x_all, y_all = load_dataset(strip=True)
+    x_train, x_test = train_test_split_cyclical(x_all)
+    y_train, y_test = train_test_split_cyclical(y_all)
+    return x_train, y_train, x_test, y_test
 
 
 def save_dataset(x_all, y_all):

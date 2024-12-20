@@ -3,6 +3,8 @@ from xgboost import XGBRegressor, plot_importance
 import training_helpers
 from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
+import pandas as pd
+from datetime import datetime
 
 
 def train_and_evaluate(X_train, Y_train, X_validate, Y_validate, lr, max_depth):
@@ -34,7 +36,6 @@ def train_best(params, X_all, Y_all):
 
 
 if __name__ == "__main__":
-    x_all, y_all = training_helpers.load_dataset()
-    x_train, x_test = training_helpers.train_test_split(x_all)
-    y_train, y_test = training_helpers.train_test_split(y_all)
+    test_start = pd.to_datetime(datetime.strptime("2024-06-22", "%Y-%m-%d"))
+    x_train, y_train, x_test, y_test = training_helpers.load_xy_time(test_start)
     train_and_evaluate(x_train, y_train, x_test, y_test, 0.1, 2)

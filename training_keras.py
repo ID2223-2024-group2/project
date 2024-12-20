@@ -7,6 +7,7 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
 import training_helpers
 import random
+from datetime import datetime
 
 
 FEATURE_DIM = None
@@ -58,14 +59,13 @@ def train_best(parameters, X_full, Y_full):
 
 
 if __name__ == "__main__":
-    x_all, y_all = training_helpers.load_dataset()
-    x_train, x_test = training_helpers.train_test_split(x_all)
-    y_train, y_test = training_helpers.train_test_split(y_all)
+    test_start = pd.to_datetime(datetime.strptime("2024-06-22", "%Y-%m-%d"))
+    x_train, y_train, x_test, y_test = training_helpers.load_xy_time(test_start)
     feature_scaler = StandardScaler()
     x_train = feature_scaler.fit_transform(x_train)
     x_test = feature_scaler.transform(x_test)
     label_scaler = StandardScaler()
     y_train = label_scaler.fit_transform(y_train)
     y_test = label_scaler.transform(y_test)
-    init_feature_dim(x_all)
+    init_feature_dim(x_train)
     train_and_evaluate(x_train, y_train, x_test, y_test, 0.01, 16, "relu")

@@ -13,4 +13,5 @@ if __name__ == "__main__":
         fv.create_training_data(description="All datapoints given as training data")
     else:
         x_all, y_all = fv.get_training_data(training_dataset_version=training_helpers.LATEST_TD)
+        print("Downloaded dataset of size", x_all.shape[0])
         training_helpers.save_dataset(x_all, y_all)
