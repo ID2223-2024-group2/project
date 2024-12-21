@@ -28,7 +28,7 @@ jobs:
         env:
           DRY_RUN: 'false'
           WEATHER_FG_VERSION: '3'
-          DELAYS_FG_VERSION: '8'
+          DELAYS_FG_VERSION: '9'
           KODA_KEY: ${{ secrets.KODA_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           USE_PROCESSES: '1'

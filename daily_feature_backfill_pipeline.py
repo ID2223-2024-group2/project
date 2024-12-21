@@ -39,7 +39,7 @@ def backfill_recent_days(start_date: str, end_date: str, fg=None, dry_run=False)
 if __name__ == "__main__":
     DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
     WEATHER_FG_VERSION = int(os.environ.get("WEATHER_FG_VERSION", 3))
-    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 8))
+    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 9))
 
     today = pd.Timestamp.now().normalize()
     yesterday = today - pd.Timedelta(days=1)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
                 name='delays',
                 description='Aggregated delay metrics per hour per day',
                 version=DELAYS_FG_VERSION,
-                primary_key=['arrival_time_bin'],
+                primary_key=['arrival_time_bin', 'route_type'],
                 event_time='arrival_time_bin'
             )
             weather_fg = fs.get_or_create_feature_group(
