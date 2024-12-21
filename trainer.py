@@ -15,7 +15,7 @@ keras_grid = {
     "model__lr": [0.001, 0.005, 0.1],
     "model__hidden": [8, 10, 16, 32],
     "model__activation": ["relu", "sigmoid", "tanh"],
-    "model__feature_dim": [18]  # Needs to be set manually because of how "multithreading" works
+    "model__feature_dim": [7]  # Needs to be set manually because of how "multithreading" works
 }
 
 CV_FOLDS = 5
@@ -29,7 +29,7 @@ def grid_search(X_all, Y_all):
     print("Starting XGBoost search")
     grid_search_xgboost(X_all, Y_all)
     print("Starting Keras search")
-    #grid_search_keras(X_all, Y_all)
+    grid_search_keras(X_all, Y_all)
 
 
 def grid_search_xgboost(X_all, Y_all):
@@ -58,6 +58,4 @@ def grid_search_keras(X_all, Y_all):
 
 if __name__ == "__main__":
     features_, labels_ = load_data()
-    X_to_use, X_hold_back = training_helpers.train_test_split(features_)
-    Y_to_use, Y_hold_back = training_helpers.train_test_split(labels_)
-    grid_search(X_to_use, Y_to_use)
+    grid_search(features_, labels_)
