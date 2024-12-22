@@ -1,9 +1,9 @@
-name: daily-backfill
+name: regular-update
 
 on:
   workflow_dispatch:
   schedule:
-  - cron: '57 7 * * *'
+  - cron: '0 * * * *'
 
 jobs:
   schedule_pipelines:
@@ -24,13 +24,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: execute daily feature backfill pipeline
+      - name: execute feature downloads
         env:
           DRY_RUN: 'false'
           WEATHER_FG_VERSION: '3'
           DELAYS_FG_VERSION: '10'
-          KODA_KEY: ${{ secrets.KODA_KEY }}
+          GTRFSR_RT_API_KEY: ${{ secrets.GTRFSR_RT_API_KEY }}
+          GTRFSR_STATIC_API_KEY: ${{ secrets.GTRFSR_STATIC_API_KEY }}
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           USE_PROCESSES: '1'
         run: |
-            python daily_feature_backfill_pipeline.py
+            python live_feature_pipeline.py

@@ -9,7 +9,7 @@ FV_VERSION = 7
 TTL = 5 * 60
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Downloading AI model")
 def download_model(_project):
     mr = _project.get_model_registry()
     hw_model = mr.get_model(name="keras", version=MODEL_VERSION)
@@ -25,7 +25,7 @@ def download_model(_project):
     return infer, feature_scaler, label_scaler
 
 
-@st.cache_data(ttl=TTL)
+@st.cache_data(ttl=TTL, show_spinner="Downloading data")
 def download_all_data(_project):
     fs = _project.get_feature_store("tsedmid2223_featurestore")
     fv = fs.get_feature_view("delays_fv", 7)
@@ -34,7 +34,7 @@ def download_all_data(_project):
     return df
 
 
-@st.cache_data(ttl=TTL)
+@st.cache_data(ttl=TTL, show_spinner="Preparing data")
 def download_last_entry(_project, transport_string):
     if transport_string == "Train":
         transport_int = 100
