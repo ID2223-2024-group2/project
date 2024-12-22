@@ -58,5 +58,6 @@ def save(model, X_all, Y_all):
 if __name__ == "__main__":
     test_start = pd.to_datetime(datetime.strptime("2024-06-22", "%Y-%m-%d"))
     x_train, y_train, x_test, y_test = training_helpers.load_xy_time(test_start)
-    _, trained = train_and_evaluate(x_train, y_train, x_test, y_test, 0.1, 2)
+    print(x_train.info())
+    _, trained = train_and_evaluate(x_train, y_train, x_test, y_test, 0.2, 4)
     #save(trained, x_train, y_train)

@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import os
 
-LATEST_FV = 5
-LATEST_TD = 1
-DATASET = 6055
-TO_USE = ["mean_arrival_delay_seconds_lag_5stops", "stop_count", "temperature_2m", "snowfall", "snow_depth", "wind_gusts_10m", "hour"]
+LATEST_FV = 7
+LATEST_TD = 2
+DATASET = 12326
+TO_USE = ["route_type", "mean_arrival_delay_seconds_lag_5stops", "stop_count", "temperature_2m", "snowfall", "snow_depth", "wind_gusts_10m", "hour"]
 #TO_USE = ["route_type", "stop_count", "temperature_2m", "apparent_temperature", "precipitation", "rain", "snowfall", "snow_depth", "cloud_cover", "wind_speed_10m", "wind_speed_100m", "wind_gusts_10m", "hour"]
 TO_PREDICT = ["mean_arrival_delay_seconds", "mean_on_time_percent"]
 #TO_PREDICT = ["mean_on_time_percent"]

@@ -1,8 +1,8 @@
 import hopsworks
 
-DELAYS_VERSION = 7
+DELAYS_VERSION = 10
 WEATHER_VERSION = 3
-FV_VERSION = 5
+FV_VERSION = 7
 
 
 if __name__ == "__main__":

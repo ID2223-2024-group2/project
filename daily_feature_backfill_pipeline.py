@@ -39,7 +39,7 @@ def backfill_recent_days(start_date: str, end_date: str, fg=None, dry_run=False)
 if __name__ == "__main__":
     DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
     WEATHER_FG_VERSION = int(os.environ.get("WEATHER_FG_VERSION", 3))
-    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 9))
+    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 10))
 
     today = pd.Timestamp.now().normalize()
     yesterday = today - pd.Timedelta(days=1)

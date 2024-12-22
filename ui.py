@@ -3,10 +3,22 @@ import ui_helpers
 import datetime
 import pandas as pd
 import numpy as np
+import hopsworks
+import os
+
+import ui_inference
 
 st.title("🐐 Gävleborg Train Delay Forecast")
 st.write("*A snow-accelerated real-time delay estimator.*")
 
+
+@st.cache_resource(show_spinner="Connecting to Hopsworks")
+def get_project():
+    hopsworks_api_key = os.environ.get("HOPSWORKS_API_KEY", open(".hw_key").read().strip())
+    return hopsworks.login(api_key_value=hopsworks_api_key)
+
+
+project = get_project()
 tab_predict, tab_evaluate = st.tabs(["Forecast", "Historical Accuracy"])
 
 
@@ -17,13 +29,17 @@ with tab_predict:
         options = ui_helpers.get_forecast_options(dummy_date)
         what_date = st.selectbox("Forecast interval",
                                  options=options,
+                                 disabled=True,
                                  format_func=lambda x: ui_helpers.get_forecast_labels(dummy_date, x))
     with col2:
-        transport_mode = st.selectbox("Mode of transportation", options=["Train", "Bus"], key="foo")
+        transport_string = transport_mode = st.selectbox("Mode of transportation", options=["Train", "Bus"], key="foo")
+    infer, feature_scaler, label_scaler = ui_inference.download_model(project)
+    last_entry = ui_inference.download_last_entry(project, transport_string)
+    delay, on_time = ui_inference.inference(infer, feature_scaler, label_scaler, last_entry)
     with col1:
-        st.metric("Avg. Arrival Delay", "324s", "-23s")
+        st.metric("Estimated Avg. Arrival Delay", ui_helpers.seconds_to_minute_string(delay))
     with col2:
-        st.metric("On Time Percentage", "80%", "3%")
+        st.metric("Estimated On Time Percentage", f"{on_time:.1f}%")
     st.write("*Transport is on-time if it arrives within 3 minutes before or 5 minutes after its scheduled time.*")
     st.divider()
     st.write("Forecasts are generated every quarter-hour, but may take a few minutes to appear. "

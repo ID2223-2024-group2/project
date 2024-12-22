@@ -11,3 +11,9 @@ def get_forecast_labels(earliest_time, interval_start):
     fmt_end = interval_end.strftime("%H:%M")
     hours_difference = int((interval_start - earliest_time).total_seconds() // 3600)
     return f"{fmt_start} - {fmt_end}  ({hours_difference + 1}h)"
+
+
+def seconds_to_minute_string(seconds):
+    mins = int(seconds // 60)
+    secs = int(seconds % 60)
+    return f"{mins}m {secs}s"

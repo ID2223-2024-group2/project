@@ -15,7 +15,7 @@ keras_grid = {
     "model__lr": [0.001, 0.005, 0.1],
     "model__hidden": [8, 10, 16, 32],
     "model__activation": ["relu", "sigmoid", "tanh"],
-    "model__feature_dim": [7]  # Needs to be set manually because of how "multithreading" works
+    "model__feature_dim": [19]  # Needs to be set manually because of how "multithreading" works
 }
 
 CV_FOLDS = 5
@@ -53,7 +53,7 @@ def grid_search_keras(X_all, Y_all):
     print("Best DNN:", search.best_params_)
     print("Scored: ", search.best_score_)
     params = {k[len("model__"):]: v for k, v in search.best_params_.items()}
-    training_keras.train_best(params, X_all, Y_all)
+    training_keras.train_best(params, X_all, Y_all, feature_scaler, label_scaler)
 
 
 if __name__ == "__main__":
