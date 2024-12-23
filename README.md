@@ -151,6 +151,7 @@ The delay features were derived by ...
 ### Weather Features
 
 **TODO: Jonas write a high-level description**
+**TODO: Jonas explain the weather is only for Gävle**
 
 ## Methodology
 
@@ -170,27 +171,137 @@ A brief description of the model is given below.
 
 ### Decision Tree
 
+A decision tree using XGBoosts's `XGBRegressor`.
+The XGBoost model is able to capture nonlinear relationships, and in our experience has performed well.
+Therefore, it is worth investigating, especially since it is quite cheap to train.
+
 ### Artificial Neural Network
 
-![Network Diagram](https://github.com/user-attachments/assets/28a63c24-dd02-46c2-88fb-36ddf25a241d)
+An artificial neural network using `keras` and `tensorflow`.
+ANN can learn extremely complex relationships.
+While we were unsure if there was enough data, we decided it was definitely worth investigating.
+The final (hyperparameter tuned) ANN had one hidden layer of size 16.
 
+<details>
+  <summary>The ANN network diagram</summary>
+
+  ![Network Diagram](https://github.com/user-attachments/assets/28a63c24-dd02-46c2-88fb-36ddf25a241d)
+</details>
 
 ## Training
-Experimentation: `training_test.ipynb`
 
-## Serving
-`api_main.py` is the entry point for an example of how the model could be served with live data.
+This section very crudely outlines how the models were trained.
+Trained models were saved on Hopsworks in the model registry.
 
-Prerequisite:
-- `pip install fastapi[standard]`
+### Preprocessing
 
-Run it with:
-- `fastapi run api_main.py` (for development).
-- `uvicorn api_main:app --host 0.0.0.0 --port 8000` (for production).
+In order to start with training, the data had to be preprocessed.
+The route type feature had to be one-hot encoded, but other than that the features were mostly already clean.
 
-## Deployment
-- Daily backfill pipelines are scheduled with GitHub Actions: `daily-backfill.yml` using `daily_feature_backfill_pipeline.py`
-- (Subject to change) Model serving and live data retrieval API is hosted on the [KTH Cloud](http://deploy.cloud.cbh.kth.se:20114/docs)
+From all available data, a training dataset was created on Hopsworks.
+One of the challenges was to determine how to split this set into training and test sets.
+There were two options:
+1. Dedicate every X datapoints to the test set. Make the cycle such that the test set sees various weekdays, seasons, etc.
+2. Use every day after day X as a test day and train on the days before.
+
+We ended up going with the second option.
+While the first seemed to make more sense intuitively, it was not performing as well.
+Similarly, once lagged data was added, this was kind of cheating, as some training days had the laggged value of test days.
+Since we had almost 3 years worth of data, this would ensure that there was sufficient season data available in the training set.
+The test set was everything after Midsommar (2024-06-22).
+
+For the ANN, normalization of the inputs/outputs was required. 
+For this, we used `sklearn`.
+`StandardScaler` was found to outperform `MinMaxScaler`, `MaxAbsScaler` and (surprisingly) `RobustScaler`.
+The scaler mean/variance was attached to the TensorFlow model as a variable and uploaded to Hopsworks.
+
+### Training
+
+The files `training_keras.py` and `training_xgboost.py` provided workbenches to quickly train and iterate over models.
+One caveat is that training data must reside locally on the computer, to avoid the Hopsworks delays.
+
+As aforementioned, the features were narrowed down using trial and error. 
+For the ANN, 40 epochs of 32 batch sizes seemed to provide the best results.
+
+### Hyperparameter Tuning
+
+We performed a grid search on the models.
+The training dataset was first split into a train and test set.
+The test set was withheld entirely, and the training set used in a 5-fold cross validation set.
+This then randomly produced training and validation features and labels.
+
+The hyperparameters that were trialled were:
+```python
+xgboost_grid = {
+    "learning_rate": [0.1, 0.2, 0.3, 0.4],
+    "max_depth": [2, 4, 6, 8]
+}
+
+keras_grid = {
+    "model__lr": [0.001, 0.005, 0.1],
+    "model__hidden": [8, 10, 16, 32],
+    "model__activation": ["relu", "sigmoid", "tanh"],
+}
+```
+
+Hyperparameter tuning took at most a minute for the decision tree.
+The rest of the many hours spent training were spent on tuning the ANN.
+
+## Results and Evaluation
+
+In order to evaluate our models numerically, we chose to use R². 
+We find this to be a little more interpretable than MSE.
+
+The best models on the final dataset were as follows:
+
+| Model | Hyperparameters                                                | R² |
+| --- |----------------------------------------------------------------| -- |
+| Decision Tree | learning rate: 0.2, max depth: 4                               | 0.37 |
+| ANN | learning rate: 0.005, relu-activated, 16 nodes in hidden layer | 0.60 |
+
+The reason why XGBoost is so low is that the R² is calculated as the mean R² of the two features.
+While on-time-percentage sees a decent R² of 0.58, the average delay R² of 0.16 drags it down significantly.
+The ANN is able to learn average delay much better, hence the higher overall R².
+
+The most important features as reported by XGBoost are as follows.
+It is unsurprising that lagged delay is weighted so highly.
+While not depicted here, we noticed that when we had many other features, 
+the weather-based features that we picked contributed much more significantly than other weather/delay features. 
+
+![Most important features](https://github.com/user-attachments/assets/4e8fda01-b73f-4725-9d4a-4122d1b09fec)
+
+R² does not tell the whole picture. (What even is a good R²?)
+Therefore, predictions are continuously (and were retroactively) generated to graph the performance.
+A screenshot of the last 300 days can be found below:
+
+![Predictive accuracy](https://github.com/user-attachments/assets/35df34d7-0953-4eaf-a74d-3e99c87af902)
+
+While there are obviously deviations between the model and actual data, we think that trends are mostly sufficiently followed.
+On some occasions, the model under-predicts, on others it over-predicts, but we believe the model generally overestimates the average delay and underestimates the on-time percentage.
+
+## Real-Time Functionality
+
+The system is batch-inference, although the batches are so frequent it is quite close to real time.
+In order to facilitate this, data needs to be updated frequently and predictions need to be made.
+For this, three pipelines are required:
+* One daily backfill pipeline, which writes the ground truth of the delay values of the day before
+This ground truth is then later on used to compute the historical performance.
+* One hourly feature pipeline, which extracts the latest features for the current hour.
+In theory, this could and should be run more frequently.
+However, processing times and CI limitations severely limit the ability to run in real time.
+* One hourly prediction pipeline, which performs predictions such that accuracy can be monitored for the past.
+Only the pipeline inferences log predictions, the one in the UI is not saved anywhere.
+
+## UI
+
+The Streamlit UI provides a way to infer the data and to see historical performance.
+Streamlit was chosen as it is very easy, efficient, flexible and elegant to use.
+
+Currently, all data and the whole model is loaded into Streamlit.
+As of right now, this does not take too many rows/resources.
+The caching mechanism built into Streamlit alleviates performance significantly.
+In the future, the model could be served on Hopsworks or Modal.
+However, we are still proud that the current solution is serverless.
 
 ## Running the Code
 
