@@ -1,12 +1,27 @@
 import streamlit as st
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
-
+import os
+import requests
 import training_helpers
+import time
 
 MODEL_VERSION = 3
 FV_VERSION = 7
 TTL = 5 * 60
+
+GIT_OWNER = "ID2223-2024-group2"
+GIT_REPO = "project"
+GIT_WORKFLOW = "regular-update.yml"
+GIT_REF = "main"
+GIT_BASE_URL = f"https://api.github.com/repos/{GIT_OWNER}/{GIT_REPO}"
+
+
+def inference(project, transport_string):
+    infer, feature_scaler, label_scaler = download_model(project)
+    last_entry = download_last_entry(project, transport_string)
+    delay, on_time = run_inference(infer, feature_scaler, label_scaler, last_entry)
+    return delay, on_time, last_entry["arrival_time_bin"].tolist()[0]
 
 
 @st.cache_resource(show_spinner="Downloading AI model")
@@ -48,8 +63,7 @@ def download_last_entry(_project, transport_string):
     return last
 
 
-def inference(infer, feature_scaler, label_scaler, last_entry):
-    print(last_entry)
+def run_inference(infer, feature_scaler, label_scaler, last_entry):
     stripped = training_helpers.strip_dates(last_entry)
     useful = stripped[training_helpers.TO_USE]
     one_hotted = training_helpers.one_hot(useful)
@@ -59,3 +73,36 @@ def inference(infer, feature_scaler, label_scaler, last_entry):
     delay = tf.squeeze(values[0, 0]).numpy()
     on_time = tf.squeeze(values[0, 1]).numpy()
     return delay, on_time
+
+
+def github_headers():
+    github_token = os.environ.get("GITHUB_TOKEN", open(".github_token").read().strip())
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github+json"
+    }
+    return headers
+
+
+def github_workflow_running_now(headers):
+    url = f"{GIT_BASE_URL}/actions/runs"
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    runs = response.json()["workflow_runs"]
+    for run in runs:
+        if run["head_branch"] == GIT_REF:
+            return run["conclusion"] is None
+
+
+def github_workflow_trigger(headers):
+    url = f"{GIT_BASE_URL}/actions/workflows/{GIT_WORKFLOW}/dispatches"
+    response = requests.post(url, headers=headers, json={"ref": GIT_REF})
+    response.raise_for_status()
+
+
+def github_workflow_wait(headers):
+    with st.spinner("Waiting for pipeline re-run eligibility..."):
+        while github_workflow_running_now(headers):
+            time.sleep(5)
+        download_all_data.clear()
+        download_last_entry.clear()

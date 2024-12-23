@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import hopsworks
 import os
+import time
 
 import ui_inference
 
@@ -19,23 +20,16 @@ def get_project():
 
 
 project = get_project()
-tab_predict, tab_evaluate = st.tabs(["Forecast", "Historical Accuracy"])
+tab_predict, tab_data, tab_evaluate = st.tabs(["Forecast", "Data", "Historical Accuracy"])
 
 
 with tab_predict:
-    col1, col2 = st.columns(2)
+    col1, _ = st.columns(2)
     with col1:
-        dummy_date = datetime.datetime(2024, 12, 21, 13, 0, 0)
-        options = ui_helpers.get_forecast_options(dummy_date)
-        what_date = st.selectbox("Forecast interval",
-                                 options=options,
-                                 disabled=True,
-                                 format_func=lambda x: ui_helpers.get_forecast_labels(dummy_date, x))
-    with col2:
         transport_string = transport_mode = st.selectbox("Mode of transportation", options=["Train", "Bus"], key="foo")
-    infer, feature_scaler, label_scaler = ui_inference.download_model(project)
-    last_entry = ui_inference.download_last_entry(project, transport_string)
-    delay, on_time = ui_inference.inference(infer, feature_scaler, label_scaler, last_entry)
+    delay, on_time, date = ui_inference.inference(project, transport_mode)
+    st.text("")
+    col1, col2 = st.columns(2)
     with col1:
         st.metric("Estimated Avg. Arrival Delay", ui_helpers.seconds_to_minute_string(delay))
     with col2:
@@ -44,6 +38,19 @@ with tab_predict:
     st.divider()
     st.write("Forecasts are generated every quarter-hour, but may take a few minutes to appear. "
              "Predictions may not reflect reality. All data is given as-is without guarantees.")
+
+with tab_data:
+    interval_start = ui_helpers.get_interval(date)
+    interval_end = ui_helpers.get_interval(date + datetime.timedelta(hours=1), full=True)
+    st.write(f"Using data from the interval {interval_start} to {interval_end}.")
+    st.text("Real-time data triggers the batch ingestion GitHub Actions pipeline manually. "
+            "While the pipeline is running, it cannot manually be re-triggered. "
+            "Pipeline runs usually take 5 minutes.")
+    github_headers = ui_inference.github_headers()
+    ui_inference.github_workflow_wait(github_headers)
+    if st.button("Download and use real-time data", type="primary"):
+        ui_inference.github_workflow_trigger(github_headers)
+        st.rerun()
 
 
 with tab_evaluate:

@@ -5,6 +5,7 @@ idea_exploration
 .gtfsr_rt_key
 .openmeteo_key
 .hw_key
+.github_token
 
 dev_data/*
 !dev_data/openmeteo_data
