@@ -92,6 +92,9 @@ def build_feature_group(rt_df: pd.DataFrame, route_types_map_df: pd.DataFrame,
     rt_df.sort_values(by='arrival_time', inplace=True)
     rt_df.set_index('arrival_time', inplace=True)
 
+    # Hopsworks expects the stop count to be a double for some reason.
+    stop_count_df['stop_count'] = stop_count_df['stop_count'].astype('float64')
+
     # Group by route_type and resample to get trip update counts per hour
     trip_update_count_df = rt_df.groupby('route_type').resample('h').size().reset_index()
     trip_update_count_df.sort_values(by=['route_type', 'arrival_time'], inplace=True)
