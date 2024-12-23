@@ -85,7 +85,8 @@ def get_live_delays_data(today: str, fg=None, dry_run=False) -> int:
 
 if __name__ == "__main__":
     DRY_RUN = os.environ.get("DRY_RUN", "True").lower() == "true"
-
+    WEATHER_FG_VERSION = int(os.environ.get("WEATHER_FG_VERSION", 3))
+    DELAYS_FG_VERSION = int(os.environ.get("DELAYS_FG_VERSION", 10))
     today = datetime.now().strftime("%Y-%m-%d")
 
     delays_fg = None
@@ -98,11 +99,11 @@ if __name__ == "__main__":
             fs = project.get_feature_store()
             delays_fg = fs.get_feature_group(
                 name='delays',
-                version=9
+                version=DELAYS_FG_VERSION
             )
             weather_fg = fs.get_feature_group(
                 name='weather',
-                version=3
+                version=WEATHER_FG_VERSION
             )
         except Exception as e:
             logger.error(f"Failed to connect to Hopsworks. Exiting. {e}")
