@@ -49,6 +49,7 @@ def download_last_entry(_project, transport_string):
 
 
 def inference(infer, feature_scaler, label_scaler, last_entry):
+    print(last_entry)
     stripped = training_helpers.strip_dates(last_entry)
     useful = stripped[training_helpers.TO_USE]
     one_hotted = training_helpers.one_hot(useful)
