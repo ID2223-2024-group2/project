@@ -1,65 +1,68 @@
 import os
 import hopsworks
+import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
+import training_helpers
 import pandas as pd
-from xgboost import XGBRegressor
 
-import weather.fetch as wf
-import weather.parse as wp
-from shared.constants import GAEVLE_LONGITUDE, GAEVLE_LATITUDE
 
 if os.environ.get("HOPSWORKS_API_KEY") is None:
     os.environ["HOPSWORKS_API_KEY"] = open(".hw_key").read()
 
 
-if __name__ == "__main__":
-    project = hopsworks.login()
-    fs = project.get_feature_store(name='tsedmid2223_featurestore')
-    print("Connected to Hopsworks Feature Store. ")
+def make_inference(transport_int):
+    fs = project.get_feature_store("tsedmid2223_featurestore")
+    fv = fs.get_feature_view("delays_fv", FEATURE_FV_VERSION)
+    df = fv.get_batch_data()
+    df.sort_values(by=["arrival_time_bin"], inplace=True, ascending=False)
+    correct_transport = df[df["route_type"] == transport_int]
+    last_entry = correct_transport.head(1)
+    stripped = training_helpers.strip_dates(last_entry)
+    useful = stripped[training_helpers.TO_USE]
+    one_hotted = training_helpers.one_hot(useful)
+    feature = tf.dtypes.cast(feature_scaler.transform(one_hotted), tf.float32)
+    predictions = infer(feature)["output_0"]
+    values = label_scaler.inverse_transform(predictions)
+    delay = tf.squeeze(values[0, 0]).numpy()
+    on_time = tf.squeeze(values[0, 1]).numpy()
+    write_inference(last_entry["arrival_time_bin"], transport_int, delay, on_time)
 
-    mr = project.get_model_registry()
-    print("Connected to Model Registry. ")
 
-    retrieved_model = mr.get_model(
-        name="delays_xgboost_model",
-        version=9,
+def write_inference(date, transport_int, delay, on_time):
+    fs = project.get_feature_store("tsedmid2223_featurestore")
+    monitor_fg = fs.get_or_create_feature_group(
+        name="delays_predictions",
+        description="Train delay prediction monitoring",
+        version=MONITOR_FV_VERSION,
+        primary_key=["date", "transport_type"],
+        event_time="date"
     )
-    saved_model_dir = retrieved_model.download()
-    print(f"Downloaded model to {saved_model_dir}")
+    data = {
+        "date": date.to_list(),
+        "transport_type": [transport_int],
+        "predicted_mean_arrival_delay_seconds": [delay],
+        "predicted_mean_on_time_percent": [on_time]
+    }
+    df = pd.DataFrame.from_dict(data)
+    # We need to wait since we do multiple inserts.
+    monitor_fg.insert(df, write_options={"wait_for_job": True})
 
-    retrieved_xgboost_model = XGBRegressor()
-    retrieved_xgboost_model.load_model(saved_model_dir + "/model.json")
-    print(f"Retrieved XGBoost model from Model Registry. {retrieved_xgboost_model}")
 
-    weather_response = wf.fetch_forecast_weather(GAEVLE_LONGITUDE, GAEVLE_LATITUDE)
-    weather_df = wp.parse_weather_response(weather_response)
-
-    train_features = weather_df
-    train_features['hour'] = weather_df['date'].dt.hour
-    train_features = weather_df.drop(['date'], axis=1)
-    # TODO: Just for testing, need to drop this from X_train or get it from current gtfs data in the future
-    # Fill stop_count column with 0
-    train_features['stop_count'] = 50
-
-    # TODO: We only need to do this manually because we're not using feature views yet
-    # Ensure the columns are in the correct order
-    expected_columns = ['stop_count', 'temperature_2m', 'apparent_temperature', 'precipitation', 'rain', 'snowfall', 'snow_depth', 'cloud_cover', 'wind_speed_10m', 'wind_speed_100m', 'wind_gusts_10m', 'hour']
-    train_features = train_features[expected_columns]
-
-    predictions = retrieved_xgboost_model.predict(train_features)
-
-    # Define the output schema
-    output_schema = [
-        {"name": "mean_arrival_delay_seconds", "type": "float64"},
-        {"name": "max_arrival_delay_seconds", "type": "float64"},
-        {"name": "mean_departure_delay_seconds", "type": "float64"},
-        {"name": "max_departure_delay_seconds", "type": "float64"},
-        {"name": "on_time_mean_percent", "type": "float64"}
-    ]
-
-    # Convert predictions to DataFrame
-    predictions_df = pd.DataFrame(predictions, columns=[col["name"] for col in output_schema])
-    # Add the date column
-    predictions_df['date'] = weather_df['date']
-
-    predictions_df.to_csv("predictions.csv", index=False)
-
+if __name__ == "__main__":
+    MODEL_VERSION = int(os.environ.get("MODEL_VERSION", 3))
+    FEATURE_FV_VERSION = int(os.environ.get("FEATURE_FV_VERSION", 7))
+    MONITOR_FV_VERSION = int(os.environ.get("MONITOR_FV_VERSION", 1))
+    project = hopsworks.login()
+    mr = project.get_model_registry()
+    hw_model = mr.get_model(name="keras", version=MODEL_VERSION)
+    where_model = hw_model.download()
+    loaded_model = tf.saved_model.load(where_model)
+    feature_scaler = StandardScaler()
+    feature_scaler.mean_ = loaded_model.x_scaler[0]
+    feature_scaler.scale_ = loaded_model.x_scaler[1]
+    label_scaler = StandardScaler()
+    label_scaler.mean_ = loaded_model.y_scaler[0]
+    label_scaler.scale_ = loaded_model.y_scaler[1]
+    infer = loaded_model.signatures["serving_default"]
+    make_inference(100)
+    make_inference(700)

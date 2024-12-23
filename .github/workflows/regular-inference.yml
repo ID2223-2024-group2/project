@@ -1,0 +1,45 @@
+name: regular-inference
+
+on:
+  workflow_dispatch:
+  schedule:
+  # The hourly ingestion should be done, but if not, we have another opportunity later.
+  - cron: '19,49 * * * *'
+
+jobs:
+  schedule_pipelines:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v4
+
+      - name: set up cache
+        uses: actions/cache@v3
+        with:
+          path: dev_data
+          key: dev-data-${{ github.ref }}
+          restore-keys: |
+            dev-data-
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.12'
+          cache: 'pip'
+
+      - name: install python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: execute feature downloads
+        env:
+          DRY_RUN: 'false'
+          MODEL_VERSION: '3'
+          FEATURE_FV_VERSION: '7'
+          MONITOR_FV_VERSION: '1'
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          USE_PROCESSES: '1'
+        run: |
+            python inference_pipeline.py
