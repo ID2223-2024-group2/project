@@ -1,7 +1,7 @@
 # Scalable Machine Learning and Deep Learning Project
 **Group 2**: Paul Hübner, Jonas Müller
 
-**Goal:** Predict weather-based public transport delays
+**Goal:** Predict weather-based public transport delays in Gävleborg.
 
 ## Setup
 
@@ -88,3 +88,26 @@ Run it with:
 ## Deployment
 - Daily backfill pipelines are scheduled with GitHub Actions: `daily-backfill.yml` using `daily_feature_backfill_pipeline.py`
 - (Subject to change) Model serving and live data retrieval API is hosted on the [KTH Cloud](http://deploy.cloud.cbh.kth.se:20114/docs)
+
+## Running the Code
+
+> ⚠️ We recommend not to run the code yourself, as there are many moving parts.
+> The data cannot be shared through Git due to their large sizes.
+> **Downloading will take DAYS and training will take hours and require ~200 GB disk space!**
+
+1. Set up a virtual environment and install the requirements.
+See the setup section for more details.
+2. Set up a Hopsworks project and replace all occurrences of `tsedmid2223_featurestore` in the code with this project. 
+In the UI, replace the GitHub repository with the correct one.
+3. **TODO: Jonas talk about how to get the features online**
+4. **TODO: Jonas talk about making the feature view**
+5. Create a test data set WITHOUT any splits once the feature view has been created.
+The data should all be ingested and materialized before this happens.
+6. Change the feature view and training data numbers in `training_helpers.py`.
+7. Download using `hopsworks_download.py`.
+8. Change the dataset size parameter in `training_helpers.py`.
+9. Run the hyperparameter tuning by running `trainer.py`.
+Be aware that **this can take hours** and it wil **take up hundreds of GB** of disk space.
+This will save both XGBoost and Keras models. Inference is only done on Keras.
+10. Run the UI via `streamlit run ui.py`.
+Or host it somewhere.
