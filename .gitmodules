@@ -1,0 +1,3 @@
+[submodule "ui"]
+	path = ui
+	url = git@github.com:ID2223-2024-group2/project-ui.git
