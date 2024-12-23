@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
   # The hourly ingestion should be done, but if not, we have another opportunity later.
-  - cron: '19,49 * * * *'
+  - cron: '19 * * * *'
 
 jobs:
   schedule_pipelines:

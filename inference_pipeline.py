@@ -52,7 +52,7 @@ if __name__ == "__main__":
     MODEL_VERSION = int(os.environ.get("MODEL_VERSION", 3))
     FEATURE_FV_VERSION = int(os.environ.get("FEATURE_FV_VERSION", 7))
     MONITOR_FV_VERSION = int(os.environ.get("MONITOR_FV_VERSION", 1))
-    project = hopsworks.login()
+    project = hopsworks.login(project="TSEDMID2223")
     mr = project.get_model_registry()
     hw_model = mr.get_model(name="keras", version=MODEL_VERSION)
     where_model = hw_model.download()
