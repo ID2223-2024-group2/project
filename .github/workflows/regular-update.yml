@@ -2,8 +2,8 @@ name: regular-update
 
 on:
   workflow_dispatch:
-  schedule:
-  - cron: '57 * * * *'
+#  schedule:
+#  - cron: '57 * * * *'
 
 jobs:
   schedule_pipelines:
