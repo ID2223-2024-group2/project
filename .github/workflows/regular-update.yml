@@ -32,6 +32,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: check cache
+        run: |
+            ls -LR dev_data
+
       - name: execute feature downloads
         env:
           DRY_RUN: 'false'
