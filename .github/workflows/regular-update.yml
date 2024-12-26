@@ -13,13 +13,13 @@ jobs:
       - name: checkout repo content
         uses: actions/checkout@v4
 
-      - name: restore cache
-        id: cache-devdata-restore
-        uses: actions/cache/restore@v4
+      - name: set up cache
+        uses: actions/cache@v3
         with:
-          path: |
-            dev_data
-          key: dev-data-${{ github.ref }}
+          path: dev_data
+          key: dev-data-${{ github.run_id }}
+          restore-keys: |
+            dev-data-
 
       - name: verify cache
         run: |
@@ -47,10 +47,3 @@ jobs:
           USE_PROCESSES: '1'
         run: |
             python live_feature_pipeline.py
-      - name: save cache
-        id: cache-devdata-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            dev_data
-          key: ${{ steps.cache-devdata-restore.outputs.cache-primary-key }}
