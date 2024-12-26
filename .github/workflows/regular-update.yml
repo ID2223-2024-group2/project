@@ -13,13 +13,17 @@ jobs:
       - name: checkout repo content
         uses: actions/checkout@v4
 
-      - name: set up cache
-        uses: actions/cache@v3
+      - name: restore cache
+        id: cache-devdata-restore
+        uses: actions/cache/restore@v4
         with:
-          path: dev_data
+          path: |
+            dev_data
           key: dev-data-${{ github.ref }}
-          restore-keys: |
-            dev-data-
+
+      - name: verify cache
+        run: |
+          ls -LR dev_data
 
       - name: setup python
         uses: actions/setup-python@v5
@@ -32,10 +36,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: check cache
-        run: |
-            ls -LR dev_data
-
       - name: execute feature downloads
         env:
           DRY_RUN: 'false'
@@ -47,3 +47,10 @@ jobs:
           USE_PROCESSES: '1'
         run: |
             python live_feature_pipeline.py
+      - name: save cache
+        id: cache-devdata-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            dev_data
+          key: ${{ steps.cache-devdata-restore.outputs.cache-primary-key }}
