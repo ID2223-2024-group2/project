@@ -1,0 +1,115 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0" version="26.0.4">
+  <diagram name="Page-1" id="hvCVw3J_U8NuzNeVNspz">
+    <mxGraphModel dx="2924" dy="1106" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;startArrow=classic;startFill=1;fillColor=#e1d5e7;strokeColor=#9673a6;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-8" target="oNIVlYiDy2HA4dlsOMTz-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.855;entryY=1;entryDx=0;entryDy=-4.35;entryPerimeter=0;startArrow=classic;startFill=1;fillColor=#e1d5e7;strokeColor=#9673a6;exitX=0.687;exitY=-0.025;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-29" target="oNIVlYiDy2HA4dlsOMTz-21">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="378" y="450" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-1" value="Feature Store" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontStyle=1;strokeColor=#00CC00;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="680" y="370" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-2" value="koda_backfill_feature_pipeline.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="220" y="270" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-3" value="delays_fg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;labelBackgroundColor=#E6FFCC;fontSize=14;labelBorderColor=none;fontStyle=1;spacing=2;spacingTop=0;spacingLeft=0;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-2" target="oNIVlYiDy2HA4dlsOMTz-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-4" value="weather_backfill_feature_pipeline.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="220" y="530" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-5" value="weather_fg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=14;labelBackgroundColor=#E6FFCC;fontStyle=1" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-4" target="oNIVlYiDy2HA4dlsOMTz-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-9" value="delays_fg &amp;amp; weather_fg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=22.5;entryPerimeter=0;fontSize=14;labelBackgroundColor=#E6FFCC;fontStyle=1" edge="1" source="oNIVlYiDy2HA4dlsOMTz-8" parent="1" target="oNIVlYiDy2HA4dlsOMTz-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="680" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;fillColor=#fff2cc;strokeColor=#d6b656;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-12" target="oNIVlYiDy2HA4dlsOMTz-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="150" y="400" />
+              <mxPoint x="150" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fillColor=#fff2cc;strokeColor=#d6b656;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-12" target="oNIVlYiDy2HA4dlsOMTz-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="210" y="550" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="190" y="400" />
+              <mxPoint x="190" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;fillColor=#fff2cc;strokeColor=#d6b656;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-12" target="oNIVlYiDy2HA4dlsOMTz-29">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="190" y="400" />
+              <mxPoint x="190" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-12" value="Open-Meteo&lt;br&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Weather data&lt;/span&gt;" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="-50" y="340" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fillColor=#e1d5e7;strokeColor=#9673a6;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-17" target="oNIVlYiDy2HA4dlsOMTz-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;fillColor=#e1d5e7;strokeColor=#9673a6;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-17" target="oNIVlYiDy2HA4dlsOMTz-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-17" value="KoDa&lt;br&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Realtime transit data (delays)&lt;br&gt;Static Data (routes, timetable)&lt;/span&gt;" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="-91" y="160" width="260" height="132" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-21" value="&lt;b&gt;Transit Data Cache&lt;/b&gt; &lt;br&gt;(basic Data Warehouse)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="275" y="120" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-31" value="delays_fg &amp;amp; weather_fg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.145;entryY=1;entryDx=0;entryDy=-4.35;entryPerimeter=0;fontSize=14;labelBackgroundColor=#E6FFCC;fontStyle=1" edge="1" source="oNIVlYiDy2HA4dlsOMTz-29" parent="1" target="oNIVlYiDy2HA4dlsOMTz-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="680" y="458" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-32" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="220" y="347" width="245" height="63" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-8" value="daily_feature_backfill_pipeline.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;strokeWidth=3;" vertex="1" parent="oNIVlYiDy2HA4dlsOMTz-32">
+          <mxGeometry y="23" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-28" value="" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.weblogos.github" vertex="1" parent="oNIVlYiDy2HA4dlsOMTz-32">
+          <mxGeometry x="210" width="35" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-33" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="220" y="440" width="245" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-29" value="&lt;div&gt;live_feature_pipeline.py&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;strokeWidth=3;" vertex="1" parent="oNIVlYiDy2HA4dlsOMTz-33">
+          <mxGeometry y="20" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-30" value="" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.weblogos.github" vertex="1" parent="oNIVlYiDy2HA4dlsOMTz-33">
+          <mxGeometry x="210" width="35" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-37" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.145;exitY=1;exitDx=0;exitDy=-4.35;exitPerimeter=0;entryX=0.313;entryY=0.05;entryDx=0;entryDy=0;entryPerimeter=0;fillColor=#e1d5e7;strokeColor=#9673a6;startArrow=classic;startFill=1;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-21" target="oNIVlYiDy2HA4dlsOMTz-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#CC00CC;" edge="1" parent="1" source="oNIVlYiDy2HA4dlsOMTz-38" target="oNIVlYiDy2HA4dlsOMTz-29">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="536" />
+              <mxPoint x="180" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="oNIVlYiDy2HA4dlsOMTz-38" value="GTFS-Regional&lt;br&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Realtime transit data (delays)&lt;br&gt;Static Data (routes, timetable)&lt;/span&gt;" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fontStyle=1;fillColor=#FFE0FC;strokeColor=#CC00CC;" vertex="1" parent="1">
+          <mxGeometry x="-92" y="470" width="260" height="132" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
