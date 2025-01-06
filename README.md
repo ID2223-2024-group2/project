@@ -257,6 +257,9 @@ The final (hyperparameter tuned) ANN had one hidden layer of size 16.
 This section very crudely outlines how the models were trained.
 Trained models were saved on [Hopsworks](https://www.hopsworks.ai/) in the model registry.
 
+![Training and inference diagram](https://raw.githubusercontent.com/ID2223-2024-group2/project/refs/heads/main/docs/training_and_inference.png)
+
+
 ### Preprocessing
 
 In order to start with training, model-specific preprocessing had to be performed on the features.
