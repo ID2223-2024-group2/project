@@ -38,6 +38,8 @@ While most transit APIs provide only real-time data which is updated and overwri
 
 This data is structured in the [GTFS](https://gtfs.org/documentation/overview/) format, but the snapshots needed to be merged and cleaned to be useful features.
 Additionally, any features we created from the historical data also needed to be created from real-time data ([GTFS-Regional API](https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/)) for our inference pipeline.
+To make this process easier, we created reusable data processing modules and functions, so the historical and live pipelines share
+multiple parts of their code (chiefly the feature transformations in `shared/features`).
 
 #### Historical Backfill
 *Note: The earliest tested successful historical request for operator `xt` was for `2022-02-01`*
