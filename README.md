@@ -20,7 +20,12 @@ The **purpose of the project** is to aid the citizens of Gävleborg with a free 
 
 At the core of the project, there are two data sources:
 - The traffic data from [Trafiklab](https://www.trafiklab.se) provides real-time and historical information on X-Trafik (Gävleborgs transit authority) and many other regional Swedish transit authorities.
+Data is collected both from the [KoDa API](https://www.trafiklab.se/api/trafiklab-apis/koda/) (historical data) and the [GTFS-Regional API](https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/) (live data).
 - The weather API from [Open-Meteo](https://open-meteo.com) is self-explanatory.
+
+![Data collection diagram](https://raw.githubusercontent.com/ID2223-2024-group2/project/refs/heads/main/docs/data_collection.png)
+
+> Backfills were executed on-demand, while daily and live feature pipelines run on GitHub Actions.
 
 Overall, in the end, there were **~12 000 hourly datapoints available** (limited by the historical X-Trafik data) of which we collected **~8 400 features**.
 
