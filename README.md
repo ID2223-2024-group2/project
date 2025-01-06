@@ -11,88 +11,124 @@
 
 When snowfall catches a city off-guard --  as it did in Munich in 2023 -- there are often drastic consequences for the public. 
 Public transportation is shut down, flights are canceled, and big events postponed [1]. 
-Gävleborg country sees snow quite frequently, and therefore should in theory be prepared in terms of infrastructure and operations. 
+Gävleborg county sees snow quite frequently, and therefore should in theory be prepared in terms of infrastructure and operations. 
 However, delays or cancellations still occur in public transportation [2]. 
 Therefore, the **goal of this project** is to investigate to what extent a machine learning model can quantify delays. 
 The **purpose of the project** is to aid the citizens of Gävleborg with a free online tool that they can then use in their own planning.
 
 ## The Datasets
 
-At the core of the project, there are two data sources.
-The traffic data from [Trafikverket](https://www.trafiklab.se) provides real-time and historical public transport information.
-The weather API from [Open-Meteo](https://open-meteo.com) is self-explanatory.
-Overall, in the end, **there were ~12 000 datapoints available**.
+At the core of the project, there are two data sources:
+- The traffic data from [Trafiklab](https://www.trafiklab.se) provides real-time and historical information on X-Trafik (Gävleborgs transit authority) and many other regional Swedish transit authorities.
+- The weather API from [Open-Meteo](https://open-meteo.com) is self-explanatory.
+
+Overall, in the end, there were **~12 000 hourly datapoints available** (limited by the historical X-Trafik data) of which we collected **~8 400 features**.
+
 Below is more information on the different datasets used from these data sources, as well as their related scripts.
 
 ### Public Transport Delays
 
-There are three data sources used.
-General information on the GTFS data can further be found at https://gtfs.org/documentation/overview/.
+Transit operations data can be accessed in many different ways, but as having access to historical data was a priority for us, we decided to base our delay features on what the [KoDa API](https://www.trafiklab.se/api/trafiklab-apis/koda/) could provide.
+While most transit APIs provide only real-time data which is updated and overwritten every few minutes, KoDa is unique in that it allows historical queries and returns a collection of 15-second snapshots of the realtime data for a day.
+
+This data is structured in the [GTFS](https://gtfs.org/documentation/overview/) format, but the snapshots needed to be merged and cleaned to be useful features.
+Additionally, any features we created from the historical data also needed to be created from real-time data ([GTFS-Regional API](https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/)) for our inference pipeline.
 
 #### Historical Backfill
-- Purpose: to provide a backfill of data that can be used for model training. 
-- Source: https://www.trafiklab.se/api/trafiklab-apis/koda/
-- Earliest tested successful request for operator `xt`: `2022-02-01`
-- Pipeline: `koda_backfill_feature_pipeline.py`
-  - Env Vars:
-    - `START_DATE`: Start date for backfilling
-    - `END_DATE`: End date for backfilling
-    - `STRIDE`: Stride for backfilling
-    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
-    - `KODA_KEY`: API key for KoDa
-    - `USE_PROCESSES`: Number of processes to use for parallel processing
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks
-    - `FG_VERSION`: Version of the delay feature group to use
-    - `RUN_HW_MATERIALIZATION_EVERY`: How often to run Hopsworks materialization jobs in days processed
-  - Example: `HOPSWORKS_API_KEY=your_key KODA_KEY=your_key USE_PROCESSES=4 START_DATE=2024-11-01 END_DATE=2024-11-01 STRIDE=4 DRY_RUN=False python3 koda_backfill_feature_pipeline.py`
+*Note: The earliest tested successful historical request for operator `xt` was for `2022-02-01`*
+
+- **Purpose:** Provide a backfill of data that can be used for model training. 
+- **Source:** [KoDa](https://www.trafiklab.se/api/trafiklab-apis/koda/)
+- **Pipeline:** `koda_backfill_feature_pipeline.py`
+<details>
+  <summary>Usage</summary>
+
+**Enviornment variables:**
+- `START_DATE`: Start date for backfilling
+- `END_DATE`: End date for backfilling
+- `STRIDE`: Stride for backfilling
+- `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
+- `KODA_KEY`: API key for KoDa
+- `USE_PROCESSES`: Number of processes to use for parallel processing
+- `HOPSWORKS_API_KEY`: API key for Hopsworks
+- `FG_VERSION`: Version of the delay feature group to use
+- `RUN_HW_MATERIALIZATION_EVERY`: How often to run Hopsworks materialization jobs in days processed
+
+**Example command:** `HOPSWORKS_API_KEY=your_key KODA_KEY=your_key USE_PROCESSES=4 START_DATE=2024-11-01 END_DATE=2024-11-01 STRIDE=4 DRY_RUN=False python3 koda_backfill_feature_pipeline.py`
+
+</details>
 
 #### Daily Backfill:
-- Purpose: provides ground-truth data of the previous day.
-- Pipeline: `daily_feature_backfill_pipeline.py`
-- Env Vars:
-  - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only output as csvs
-  - `WEATHER_FG_VERSION`: Version of the weather feature group to use
-  - `DELAYS_FG_VERSION`: Version of the delay feature group to use
-  - `KODA_KEY`: API key for KoDa
-  - `USE_PROCESSES`: Number of processes to use for parallel processing
-  - `HOPSWORKS_API_KEY`: API key for Hopsworks
+- **Purpose**: Provide ground-truth data for the previous day and keep building training collection.
+- **Source**: [KoDa](https://www.trafiklab.se/api/trafiklab-apis/koda/)
+- **Pipeline:** `daily_feature_backfill_pipeline.py` (Scheduled in `.github/workflows/daily-backfill.yml`)
+<details>
+  <summary>Usage</summary>
+
+**Enviornment variables:**
+- `DRY_RUN`: If set to `True`, no data will be written to the feature store, only output as csvs
+- `WEATHER_FG_VERSION`: Version of the weather feature group to use
+- `DELAYS_FG_VERSION`: Version of the delay feature group to use
+- `KODA_KEY`: API key for KoDa
+- `USE_PROCESSES`: Number of processes to use for parallel processing
+- `HOPSWORKS_API_KEY`: API key for Hopsworks
+
+**Example:** `WEATHER_FG_VERSION=1 HOPSWORKS_API_KEY=your_key DRY_RUN=False KODA_KEY=your_key python3 daily_feature_backfill_pipeline.py`
+</details>
 
 #### Real-Time Data:
-- Purpose: to provide real-time data that can be used to make real-time estimations.
-In reality, this is used in batch inference, as opposed to truly real-time.
-- Source https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/
-- Pipeline: `live_feature_pipeline.py`
-  - Env Vars:
-    - `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
-    - `GTRFSR_RT_API_KEY`: API key for GTFS Regional Realtime
-    - `GTRFSR_STATIC_API_KEY`: API key for GTFS Regional Static
-    - `USE_PROCESSES`: Number of processes to use for parallel processing
-    - `HOPSWORKS_API_KEY`: API key for Hopsworks
-  - Example: `HOPSWORKS_API_KEY=your_key DRY_RUN=False python3 live_feature_pipeline.py`
+- **Purpose**: Provide real-time data that can be used to make real-time delay predictions (`inference_pipeline.py`).
+In reality, this is used in (at least) hourly batch inference, as opposed to truly real-time.
+- **Source:** [GTFS-Regional](https://www.trafiklab.se/api/gtfs-datasets/gtfs-regional/)
+- **Pipeline:** `live_feature_pipeline.py` (Scheduled in `.github/workflows/regular-update.yml`)
+<details>
+  <summary>Usage</summary>
+
+**Enviornment variables:**
+- `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
+- `GTRFSR_RT_API_KEY`: API key for GTFS Regional Realtime
+- `GTRFSR_STATIC_API_KEY`: API key for GTFS Regional Static
+- `USE_PROCESSES`: Number of processes to use for parallel processing
+- `HOPSWORKS_API_KEY`: API key for Hopsworks
+
+**Example:** `HOPSWORKS_API_KEY=your_key DRY_RUN=False python3 live_feature_pipeline.py`
+
+</details>
 
 ### Weather Data
-More information can be found here: https://open-meteo.com/en/docs.
+More information on the source data can be found here: https://open-meteo.com/en/docs.
 
 **Historical Backfill**:
-- Purpose: to provide a backfill of data that can be used for model training.
-- Pipeline:`weather_backfill_feature_pipeline.py`
-- Env Vars:
-  - `START_DATE`: Start date for backfilling
-  - `END_DATE`: End date for backfilling
-  - `HOPSWORKS_API_KEY`: API key for Hopsworks 
+- **Purpose:** Provide a backfill of data that can be used for model training.
+- **Source:** [Archive API]("https://archive-api.open-meteo.com/v1/archive")
+- **Pipeline:** `weather_backfill_feature_pipeline.py`
+<details>
+  <summary>Usage</summary>
+
+**Enviornment variables:**
+- `START_DATE`: Start date for backfilling
+- `END_DATE`: End date for backfilling
+- `HOPSWORKS_API_KEY`: API key for Hopsworks 
+- `DRY_RUN`: If set to `True`, no data will be written to the feature store, only one day processed and written to a csv file
+
+**Example:** `HOPSWORKS_API_KEY=your_key DRY_RUN=False START_DATE=2024-10-01 END_DATE=2024-11-01 python3 weather_backfill_feature_pipeline.py`
+
+</details>
 
 **Daily Backfill**:
-- Purpose: provides ground-truth data of the previous day. 
-- Pipeline: `daily_feature_backfill_pipeline.py` (same as for delays)
+- **Purpose:** Provide ground-truth data for the previous day and keep building training collection.
+- **Source:** [Forecast API](https://api.open-meteo.com/v1/forecast) but for the previous day (Archive API does not provide short-term history).
+- **Pipeline:** `daily_feature_backfill_pipeline.py` (same as for delays)
 
 **Predictions**
-- Purpose: Weather predictions for the future, that can be used to make delay predictions.
-- Pipeline: `live_feature_pipeline.py` (same as for delays)
+- **Purpose:** Provide (predicted) weather data for the future that can be used to make delay predictions (`inference_pipeline.py`).
+- **Source:** [Forecast API](https://api.open-meteo.com/v1/forecast)
+- **Pipeline:** `live_feature_pipeline.py` (same as for delays)
 
 ## Feature Engineering
 
 Both data sources provide a plethora of information. 
-There are two feature groups, delays (via from the traffic data) and weather.
+There are two feature groups, delays (via X-Trafik data) and weather.
 
 The table below summarizes all the features. 
 Which features to include in the final models was decided through trial and error early on.
