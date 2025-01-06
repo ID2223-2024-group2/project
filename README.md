@@ -16,7 +16,7 @@ However, delays or cancellations still occur in public transportation [2].
 Therefore, the **goal of this project** is to investigate to what extent a machine learning model can quantify delays. 
 The **purpose of the project** is to aid the citizens of Gävleborg with a free online tool that they can then use in their own planning.
 
-## The Datasets
+## Datasets
 
 At the core of the project, there are two data sources:
 - The traffic data from [Trafiklab](https://www.trafiklab.se) provides real-time and historical information on X-Trafik (Gävleborgs transit authority) and many other regional Swedish transit authorities.
@@ -133,7 +133,10 @@ There are two feature groups, delays (via X-Trafik data) and weather.
 The table below summarizes all the features. 
 Which features to include in the final models was decided through trial and error early on.
 It was found that, as expected, too many features caused quite extreme overfitting.
-We ended up **predicting** two features: **average arrival delay** and **on time percentage**.
+We ended up **predicting** two key labels, **average arrival delay** and **on time percentage**, and only using a subset 
+of our total features as inputs.
+
+All features are stored in the [Hopsworks](https://www.hopsworks.ai/) feature store for batch and online tasks.
 
 <details>
   <summary>All features (very long table)</summary>
@@ -179,15 +182,33 @@ We ended up **predicting** two features: **average arrival delay** and **on time
 </details>
 
 ### Delay Features
+Of the available real-time data we exclusively used `TripUpdates` in combination with static GTFS data to gather context information such as planned `stop count` per hour
+and `route_type` (bus or train).
 
-The delay features were derived by ...
-**TODO: Jonas write a high-level description**
-**TODO: Jonas explain why we have our label in our features**
+To limit the project scope, we decided to focus on system-wide delays instead of individual vehicle or route metrics.
+As such, when engineering features we aggregated delays across all routes and vehicles.
+Additionally, knowing that weather data more granular than hourly would not be available, we decided to aggregate delays on an hourly basis.
+This was accomplished by first merging all `TripUpdate` snapshots for a day, removing duplicates and then keeping only the latest update for each trip and stop,
+leaving us with the most recent delay information for each stop of the day.
+After calculating stop-level features, the stop-rows were grouped by route type and resampled into hourly bins.
+
+In order to nevertheless capture temporal dependencies in the data, we experimented extensively with lagged features and sliding windows as well as
+establishing other temporal features such as `delay_change`.
+However, just using lagged arrival delays were found to be the most effective for our final prediction task.
+
+> ℹ️️ This hourly binning and lagging of features unfortunately also means that real-time predictions are more limited by how many and how early `TripUpdates` are published
+for future stops, as too few updates per hour would result in skewed aggregated features.
+
+We also experimented with what labels would be most interesting to predict before settling on average delay and on-time percentage.
 
 ### Weather Features
+While weather is a regional phenomenon, we decided to only use weather data from Gävle, the capital of Gävleborg.
+We deemed this simplification reasonable as much of the X-Trafik routes are centered around Gävle and aggregating
+weather data for each stop location individually would likely not yield much additional information for system-wide delays on top of being complex to implement.
 
-**TODO: Jonas write a high-level description**
-**TODO: Jonas explain the weather is only for Gävle**
+Our weather features are transformed very little. 
+We first selected all available features which could plausibly have an effect on delays before narrowing it down to temperature, snow and wind gusts.
+We merely added the `hour` bin to the data in order to merge it with the delay features more easily.
 
 ## Methodology
 
@@ -207,14 +228,14 @@ A brief description of the model is given below.
 
 ### Decision Tree
 
-A decision tree using XGBoosts's `XGBRegressor`.
+A decision tree using [XGBoosts's](https://github.com/dmlc/xgboost) `XGBRegressor`.
 The XGBoost model is able to capture nonlinear relationships, and in our experience has performed well.
-Therefore, it is worth investigating, especially since it is quite cheap to train.
+Therefore, it is worth investigating, especially since it is computationally cheap to train.
 
 ### Artificial Neural Network
 
 An artificial neural network using `keras` and `tensorflow`.
-ANN can learn extremely complex relationships.
+ANNs can learn extremely complex relationships.
 While we were unsure if there was enough data, we decided it was definitely worth investigating.
 The final (hyperparameter tuned) ANN had one hidden layer of size 16.
 
@@ -227,11 +248,11 @@ The final (hyperparameter tuned) ANN had one hidden layer of size 16.
 ## Training
 
 This section very crudely outlines how the models were trained.
-Trained models were saved on Hopsworks in the model registry.
+Trained models were saved on [Hopsworks](https://www.hopsworks.ai/) in the model registry.
 
 ### Preprocessing
 
-In order to start with training, the data had to be preprocessed.
+In order to start with training, model-specific preprocessing had to be performed on the features.
 The route type feature had to be one-hot encoded, but other than that the features were mostly already clean.
 
 From all available data, a training dataset was created on Hopsworks.
@@ -240,11 +261,11 @@ There were two options:
 1. Dedicate every X datapoints to the test set. Make the cycle such that the test set sees various weekdays, seasons, etc.
 2. Use every day after day X as a test day and train on the days before.
 
-We ended up going with the second option.
+We ended up going with the *second* option.
 While the first seemed to make more sense intuitively, it was not performing as well.
-Similarly, once lagged data was added, this was kind of cheating, as some training days had the laggged value of test days.
+Similarly, once lagged data was added, this was kind of cheating, as some training days had the lagged value of test days.
 Since we had almost 3 years worth of data, this would ensure that there was sufficient season data available in the training set.
-The test set was everything after Midsommar (2024-06-22).
+The test set was everything after Midsommar 2024 (2024-06-22).
 
 For the ANN, normalization of the inputs/outputs was required. 
 For this, we used `sklearn`.
@@ -286,7 +307,7 @@ The rest of the many hours spent training were spent on tuning the ANN.
 ## Results and Evaluation
 
 In order to evaluate our models numerically, we chose to use R². 
-We find this to be a little more interpretable than MSE.
+We find this to be a more interpretable than MSE.
 
 The best models on the final dataset were as follows:
 
@@ -320,13 +341,14 @@ On some occasions, the model under-predicts, on others it over-predicts, but we 
 The system is batch-inference, although the batches are so frequent it is quite close to real time.
 In order to facilitate this, data needs to be updated frequently and predictions need to be made.
 For this, three pipelines are required:
-* One daily backfill pipeline, which writes the ground truth of the delay values of the day before
+
+- One daily backfill pipeline, which writes the ground truth of the delay values of the day before.
 This ground truth is then later on used to compute the historical performance.
-* One hourly feature pipeline, which extracts the latest features for the current hour.
+- One hourly feature pipeline, which extracts the latest features for the current hour.
 In theory, this could and should be run more frequently.
 However, processing times and CI limitations severely limit the ability to run in real time.
-* One hourly prediction pipeline, which performs predictions such that accuracy can be monitored for the past.
-Only the pipeline inferences log predictions, the one in the UI is not saved anywhere.
+- One hourly prediction pipeline, which performs predictions such that accuracy can be monitored for the past (hindcast) using a separate feature group in Hopsworks.
+**Only** these scheduled pipeline predictions are logged, the results of live inferences via the UI are **not** saved anywhere.
 
 ## UI
 
@@ -335,7 +357,7 @@ Streamlit was chosen as it is very easy, efficient, flexible and elegant to use.
 
 Currently, all data and the whole model is loaded into Streamlit.
 As of right now, this does not take too many rows/resources.
-The caching mechanism built into Streamlit alleviates performance significantly.
+The caching mechanism built into Streamlit alleviates performance issues significantly.
 In the future, the model could be served on Hopsworks or Modal.
 However, we are still proud that the current solution is serverless.
 
@@ -350,11 +372,11 @@ Ensure to have ~7000 CI minutes available to you, a lot of the tasks happen on C
 
 ### Dependencies
 
-Dependencies are currently just managed with venv and there are already some conflicts, but working configurations are possible.
-`hopsworks` and the old `protobuf` version needed for KoDa appear to be the main causes of issues.
-Additionally, XGBoost seems to not like `scikit-learn > 1.5.2`.
-`requirements_jonas.txt` should contain a working configuration for Ubuntu 24/Win 11 with Python 3.12.3.
-`requirements.txt` should work for Ubuntu 20 Python 3.10.
+Dependencies are currently just managed with venv and there are some conflicts, but working configurations are possible.
+Key points to note for the installation:
+- Install Hopsworks using `pip install hopsworks[python]` not just `hopsworks`.
+- `requirements_jonas.txt` should contain a working configuration for Ubuntu 24/Win 11 with Python 3.12.3.
+- `requirements.txt` should work for Ubuntu 20 Python 3.10 (i.e. the pipeline environment).
 
 ### Instructions
 
@@ -366,19 +388,28 @@ It could be that for individual tasks there are breakages depending on the envir
 See the above section for more details.
 2. Set up a Hopsworks project and replace all occurrences of `tsedmid2223_featurestore` in the code with this project. 
 In the UI, replace the GitHub repository with the correct one.
-3. **TODO: Jonas talk about how to get the features online**
-4. **TODO: Jonas talk about making the feature view**
-5. Create a test data set WITHOUT any splits once the feature view has been created.
+3. For data collection, `koda_backfill_feature_pipeline.py` and `weather_backfill_feature_pipeline.py` will perform all the setup as
+long as they are provided with the necessary API keys\* and adjusted environment variables (see previous "Datasets" section).
+By default, the `./dev_data` directory is used extensively by the data collection modules for various cache directories. 
+The path of these caches is hardcoded, but can be adjusted at the top of each of the module files.
+**Be aware** that KoDa data collection is slow for multiple reasons\*\* and is sped up significantly by parallel processing if available (see `USE_PROCESSES` environment variables).
+4. Wait for the Hopsworks materialization jobs to finish (potentially run one more time to ensure all data is materialized).
+5. Create the delays feature view using `make_delay_fv.py`.
+6. Create a test data set WITHOUT any splits once the feature view has been created.
 The data should all be ingested and materialized before this happens.
-6. Change the feature view and training data numbers in `training_helpers.py`.
-7. Download using `hopsworks_download.py`.
-8. Change the dataset size parameter in `training_helpers.py`.
-9. Run the hyperparameter tuning by running `trainer.py`.
-Be aware that **this can take hours** and it wil **take up hundreds of GB** of disk space.
+7. Change the feature view and training data numbers in `training_helpers.py`.
+8. Download using `hopsworks_download.py`.
+9. Change the dataset size parameter in `training_helpers.py`.
+10. Run the hyperparameter tuning by running `trainer.py`.
+**Be aware** that this can take *hours* and it wil take up *hundreds of GB* of disk space.
 This will save both XGBoost and Keras models. Inference is only done on Keras.
-10. Run the UI via `streamlit run ui.py`.
+11. Run the UI via `streamlit run ui.py`.
 Or host it somewhere.
 
+\* The Trafiklab API keys are available for free, but require registration.\
+\*\* The KoDa API needs to be polled until a day's data is prepared and all data is compressed (and therefore must be decompressed) at multiple levels.
+Collecting all the data of one year on a 4-core VM took around *3 days*. Once cached, any future feature transformations are much quicker, being then only bottlenecked
+by Hopsworks API calls.
 ## References
 
 [1] Reuters. “Munich flights, long-distance trains cancelled due to snow”. In: Reuters (Dec. 2023). url: https://www.reuters.com/world/europe/munich-flights-long-distance-trains-cancelled-due-snow-2023-12-02/ (visited on 12/18/2024).
