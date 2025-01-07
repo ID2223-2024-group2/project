@@ -1,6 +1,7 @@
 # Scalable Machine Learning and Deep Learning Project
 
-![The Dashboard](https://github.com/user-attachments/assets/d16bf90d-5a82-4a06-83bb-0ffee09ee697)
+![The Dashboard](https://github.com/user-attachments/assets/0655bc50-6525-43b9-b148-b1cd683fed0c)
+
 [**🖥️ Click me to see the dashboard ✨**](https://gaevle.streamlit.app)
 
 **Group 2**: Paul Hübner, Jonas Müller
