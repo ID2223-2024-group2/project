@@ -336,7 +336,7 @@ It is unsurprising that lagged delay is weighted so highly.
 While not depicted here, we noticed that when we had many other features, 
 the weather-based features that we picked contributed much more significantly than other weather/delay features. 
 
-![Most important features](https://github.com/user-attachments/assets/dd28fa8a-2f23-4937-818e-a6a4993a9f9f)
+![Most important features](https://github.com/user-attachments/assets/2fc0b80a-e21d-4267-b111-d921f81bae99)
 
 
 R² does not tell the whole picture. (What even is a good R²?)
