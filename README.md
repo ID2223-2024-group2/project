@@ -28,7 +28,7 @@ Data is collected both from the [KoDa API](https://www.trafiklab.se/api/trafikla
 
 > Backfills were executed on-demand, while daily and live feature pipelines run on GitHub Actions.
 
-Overall, in the end, there were **~12 000 hourly datapoints available** (limited by the historical X-Trafik data) of which we collected **~8 400 features**.
+Overall, in the end, there were **~12 000 hourly datapoints available** (limited by the historical X-Trafik data) of which we collected **~8 400 feature instances** (rows in the feature view).
 
 Below is more information on the different datasets used from these data sources, as well as their related scripts.
 
