@@ -101,11 +101,11 @@ def read_pb_to_dataframe(file_path: str) -> pd.DataFrame:
     return df
 
 
-def unzip_gtfs_archive(input_path: str, data_dir: str, remove_archive_after=False) -> str:
+def unzip_gtfs_archive(input_path: str, data_dir: str, remove_archive_after=False, force=False) -> str:
     print(f"Unzipping {input_path}")
     input_file = os.path.basename(input_path)
     output_path = os.path.join(data_dir, input_file.replace(".7z", ""))
-    if os.path.exists(output_path):
+    if os.path.exists(output_path) and not force:
         print(f"File already unzipped to {output_path}.")
         if remove_archive_after:
             print(f"Removing {input_path}")
